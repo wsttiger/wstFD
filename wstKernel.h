@@ -6,7 +6,12 @@
 
 using std::vector;
 
-class wstKernel1D {
+class wstKernel {
+  public:
+  virtual wstTensor apply(const wstTensor& t) = 0;
+};
+
+class wstKernel1D : public wstKernel {
 private:
   struct wstStencil1D {
     int x;
@@ -48,21 +53,13 @@ public:
     _local = false;
   }
 
-  wstTensor apply(const wstTensor& t) {
+  virtual wstTensor apply(const wstTensor& t) {
     wstTensor r = copy(t,true);
-    printf("apply: copied tensor t into r\n");
-    printf("t.ndim() = %d     r.ndim() = %d\n", t.ndim(), r.ndim());
-        int stsz0 = _stencil.size();
-        for (int ist = 0; ist < stsz0; ist++) {
-          wstStencil1D st = _stencil[ist];
-          printf("stencil:     %d   %5.3f\n", st.x, st.c);
-        }
     int d0 = t.dim(0); 
     int stsz = _stencil.size();
     // loop over points
     for (int i = 0; i < d0; i++) {
-      //double val = (_local) ? _localf(i,j)*t(i,j) : 0.0;
-      double val = 0.0;
+      double val = (_local) ? _localf(i)*t(i) : 0.0;
       for (int ist = 0; ist < stsz; ist++) {
         wstStencil1D st = _stencil[ist];
         val += st.c*t(i+st.x);
@@ -73,7 +70,7 @@ public:
   }
 };
 
-class wstKernel2D {
+class wstKernel2D : public wstKernel {
 private:
   struct wstStencil2D {
     int x;
@@ -118,20 +115,14 @@ public:
     _local = false;
   }
 
-  wstTensor apply(const wstTensor& t) {
+  virtual wstTensor apply(const wstTensor& t) {
     wstTensor r = copy(t,true);
-        int stsz0 = _stencil.size();
-        for (int ist = 0; ist < stsz0; ist++) {
-          wstStencil2D st = _stencil[ist];
-          printf("stencil:     %d  %d     %5.3f\n", st.x, st.y, st.c);
-        }
     int d0 = t.dim(0); int d1 = t.dim(1); 
     int stsz = _stencil.size();
     // loop over points
     for (int i = 0; i < d0; i++) {
       for (int j = 0; j < d1; j++) {
-        //double val = (_local) ? _localf(i,j)*t(i,j) : 0.0;
-        double val = 0.0;
+        double val = (_local) ? _localf(i,j)*t(i,j) : 0.0;
         for (int ist = 0; ist < stsz; ist++) {
           wstStencil2D st = _stencil[ist];
           val += st.c*t(i+st.x, j+st.y);
@@ -143,7 +134,7 @@ public:
   }
 };
 
-class wstKernel3D {
+class wstKernel3D : public wstKernel {
 private:
   struct wstStencil3D {
     int x;
@@ -195,10 +186,6 @@ public:
     wstTensor r = copy(t,true);
     int d0 = t.dim(0); int d1 = t.dim(1); int d2 = t.dim(2);
     int stsz = _stencil.size();
-        for (int ist = 0; ist < stsz; ist++) {
-          wstStencil3D st = _stencil[ist];
-          printf("stencil:     %d  %d  %d     %5.3f\n", st.x, st.y, st.z, st.c);
-        }
     // loop over points
     for (int i = 0; i < d0; i++) {
       for (int j = 0; j < d1; j++) {
@@ -348,6 +335,44 @@ wstKernel3D create_laplacian_5p_3d(double hx, double hy, double hz) {
 
   wstKernel3D kernel;
   kernel.create(xoffset5p, yoffset5p, zoffset5p, vcoeffs5p);
+  return kernel;
+}
+
+wstKernel1D create_laplacian_7p_1d(double hx) {
+  int offsets7p[7] = {-3, -2, -1, 0, 1, 2, 3};
+  double coeffs7p[7] = {2.0/180.0, -27.0/180.0, 270.0/180.0, -490.0/180.0, 270.0/180.0, -27.0/180.0, 2.0/180.0};
+  vector<int> xoffset7p(21,0); 
+  vector<double> vcoeffs7p(21,0.0);
+  int p = 0;
+  for (int i = 0; i < 7; i++) {
+    xoffset7p[i+p] = offsets7p[i];   
+    vcoeffs7p[i+p] = coeffs7p[i]/hx/hx;
+  }
+
+  wstKernel1D kernel;
+  kernel.create(xoffset7p, vcoeffs7p);
+  return kernel;
+}
+
+wstKernel2D create_laplacian_7p_2d(double hx, double hy) {
+  int offsets7p[7] = {-3, -2, -1, 0, 1, 2, 3};
+  double coeffs7p[7] = {2.0/180.0, -27.0/180.0, 270.0/180.0, -490.0/180.0, 270.0/180.0, -27.0/180.0, 2.0/180.0};
+  vector<int> xoffset7p(21,0); 
+  vector<int> yoffset7p(21,0); 
+  vector<double> vcoeffs7p(21,0.0);
+  int p = 0;
+  for (int i = 0; i < 7; i++) {
+    xoffset7p[i+p] = offsets7p[i];   
+    vcoeffs7p[i+p] = coeffs7p[i]/hx/hx;
+  }
+  p += 7;
+  for (int i = 0; i < 7; i++) {
+    yoffset7p[i+p] = offsets7p[i];   
+    vcoeffs7p[i+p] = coeffs7p[i]/hy/hy;
+  }
+
+  wstKernel2D kernel;
+  kernel.create(xoffset7p, yoffset7p, vcoeffs7p);
   return kernel;
 }
 

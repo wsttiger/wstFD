@@ -1,3 +1,6 @@
+#ifndef WSTTENSOR_H_
+#define WSTTENSOR_H_
+
 #include <vector>
 #include <cassert>
 
@@ -223,7 +226,7 @@ public:
     int idx0 = (_bc[0]) ? periodic_index(i0, _dims[0]) : i0;
     int idx1 = (_bc[1]) ? periodic_index(i1, _dims[1]) : i1;
     int idx2 = (_bc[2]) ? periodic_index(i2, _dims[2]) : i2;
-    return _p[i0*_dims[1]*_dims[2]+i1*_dims[2]+i2];
+    return _p[idx0*_dims[1]*_dims[2]+idx1*_dims[2]+idx2];
   }
 
   double& operator()(int i0, int i1, int i2) const {
@@ -231,7 +234,7 @@ public:
     int idx0 = (_bc[0]) ? periodic_index(i0, _dims[0]) : i0;
     int idx1 = (_bc[1]) ? periodic_index(i1, _dims[1]) : i1;
     int idx2 = (_bc[2]) ? periodic_index(i2, _dims[2]) : i2;
-    return _p[i0*_dims[1]*_dims[2]+i1*_dims[2]+i2];
+    return _p[idx0*_dims[1]*_dims[2]+idx1*_dims[2]+idx2];
   }
 
   // perform inplace a*(*this) + b*t
@@ -277,210 +280,4 @@ public:
   }
 };
 
-class wstKernel1D {
-private:
-  struct wstStencil1D {
-    int x;
-    double c;
-    
-    wstStencil1D() : x(0), c(0.0) {}
-    wstStencil1D(int x, double c) : x(x), c(c) {}
-  };
-
-  vector<wstStencil1D> _stencil;
-  wstTensor _localf;
-  bool _local;
-
-public:
-
-  // default constructor
-  wstKernel1D()
-   : _local(false) {}
-
-  // constructor with a local function attached
-  // remember that we are making a deep copy of localf
-  void create(wstTensor localf, 
-              vector<int> xoffset,
-              vector<double> coeffs) {
-    
-    _localf = copy(localf);
-    _stencil = vector<wstStencil1D>(xoffset.size());
-    for (int i = 0; i < xoffset.size(); i++) 
-      _stencil[i] = wstStencil1D(xoffset[i], coeffs[i]);
-    _local = true;
-  }
-
-  // constructor without a local function
-  void create(vector<int> xoffset,
-              vector<double> coeffs) {
-    _stencil = vector<wstStencil1D>(xoffset.size());
-    for (int i = 0; i < xoffset.size(); i++) 
-      _stencil[i] = wstStencil1D(xoffset[i], coeffs[i]);
-    _local = false;
-  }
-
-  wstTensor apply(const wstTensor& t) {
-    wstTensor r = copy(t,true);
-    printf("apply: copied tensor t into r\n");
-    printf("t.ndim() = %d     r.ndim() = %d\n", t.ndim(), r.ndim());
-        int stsz0 = _stencil.size();
-        for (int ist = 0; ist < stsz0; ist++) {
-          wstStencil1D st = _stencil[ist];
-          printf("stencil:     %d   %5.3f\n", st.x, st.c);
-        }
-    int d0 = t.dim(0); 
-    int stsz = _stencil.size();
-    // loop over points
-    for (int i = 0; i < d0; i++) {
-      //double val = (_local) ? _localf(i,j)*t(i,j) : 0.0;
-      double val = 0.0;
-      for (int ist = 0; ist < stsz; ist++) {
-        wstStencil1D st = _stencil[ist];
-        val += st.c*t(i+st.x);
-      }
-      r(i) = val;
-    }
-    return r;
-  }
-};
-
-class wstKernel2D {
-private:
-  struct wstStencil2D {
-    int x;
-    int y;
-    double c;
-    
-    wstStencil2D() : x(0), y(0), c(0.0) {}
-    wstStencil2D(int x, int y, double c) : x(x), y(y), c(c) {}
-  };
-
-  vector<wstStencil2D> _stencil;
-  wstTensor _localf;
-  bool _local;
-
-public:
-
-  // default constructor
-  wstKernel2D()
-   : _local(false) {}
-
-  // constructor with a local function attached
-  // remember that we are making a deep copy of localf
-  void create(wstTensor localf, 
-              vector<int> xoffset,
-              vector<int> yoffset,
-              vector<double> coeffs) {
-    
-    _localf = copy(localf);
-    _stencil = vector<wstStencil2D>(xoffset.size());
-    for (int i = 0; i < xoffset.size(); i++) 
-      _stencil[i] = wstStencil2D(xoffset[i], yoffset[i],  coeffs[i]);
-    _local = true;
-  }
-
-  // constructor without a local function
-  void create(vector<int> xoffset,
-              vector<int> yoffset,
-              vector<double> coeffs) {
-    _stencil = vector<wstStencil2D>(xoffset.size());
-    for (int i = 0; i < xoffset.size(); i++) 
-      _stencil[i] = wstStencil2D(xoffset[i], yoffset[i], coeffs[i]);
-    _local = false;
-  }
-
-  wstTensor apply(const wstTensor& t) {
-    wstTensor r = copy(t,true);
-        int stsz0 = _stencil.size();
-        for (int ist = 0; ist < stsz0; ist++) {
-          wstStencil2D st = _stencil[ist];
-          printf("stencil:     %d  %d     %5.3f\n", st.x, st.y, st.c);
-        }
-    int d0 = t.dim(0); int d1 = t.dim(1); 
-    int stsz = _stencil.size();
-    // loop over points
-    for (int i = 0; i < d0; i++) {
-      for (int j = 0; j < d1; j++) {
-        //double val = (_local) ? _localf(i,j)*t(i,j) : 0.0;
-        double val = 0.0;
-        for (int ist = 0; ist < stsz; ist++) {
-          wstStencil2D st = _stencil[ist];
-          val += st.c*t(i+st.x, j+st.y);
-        }
-        r(i,j) = val;
-      }
-    }
-    return r;
-  }
-};
-
-class wstKernel3D {
-private:
-  struct wstStencil3D {
-    int x;
-    int y;
-    int z;
-    double c;
-    
-    wstStencil3D() : x(0), y(0), z(0), c(0.0) {}
-    wstStencil3D(int x, int y, int z, double c) : x(x), y(y), z(z), c(c) {}
-  };
-
-  vector<wstStencil3D> _stencil;
-  wstTensor _localf;
-  bool _local;
-
-public:
-
-  // default constructor
-  wstKernel3D()
-   : _local(false) {}
-
-  // constructor with a local function attached
-  // remember that we are making a deep copy of localf
-  void create(wstTensor localf, 
-              vector<int> xoffset,
-              vector<int> yoffset,
-              vector<int> zoffset,
-              vector<double> coeffs) {
-    
-    _localf = copy(localf);
-    _stencil = vector<wstStencil3D>(xoffset.size());
-    for (int i = 0; i < xoffset.size(); i++) 
-      _stencil[i] = wstStencil3D(xoffset[i], yoffset[i], zoffset[i], coeffs[i]);
-    _local = true;
-  }
-
-  // constructor without a local function
-  void create(vector<int> xoffset,
-              vector<int> yoffset,
-              vector<int> zoffset,
-              vector<double> coeffs) {
-    _stencil = vector<wstStencil3D>(xoffset.size());
-    for (int i = 0; i < xoffset.size(); i++) 
-      _stencil[i] = wstStencil3D(xoffset[i], yoffset[i], zoffset[i], coeffs[i]);
-    _local = false;
-  }
-
-  wstTensor apply(const wstTensor& t) {
-    wstTensor r = copy(t,true);
-    int d0 = t.dim(0); int d1 = t.dim(1); int d2 = t.dim(2);
-    int stsz = _stencil.size();
-    // loop over points
-    for (int i = 0; i < d0; i++) {
-      for (int j = 0; j < d1; j++) {
-        for (int k = 0; k < d2; k++) {
-          printf("%d  %d  %d\n", i, j, k);
-          double val = (_local) ? _localf(i,j,k)*t(i,j,k) : 0.0;
-          for (int ist = 0; ist < stsz; ist++) {
-            wstStencil3D st = _stencil[ist];
-            val += st.c*t(i+st.x, j+st.y, k+st.z);
-          }
-          r(i,j,k) = val;
-        }
-      }
-    }
-    return r;
-  }
-};
-
+#endif
