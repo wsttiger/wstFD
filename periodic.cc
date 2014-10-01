@@ -1,7 +1,11 @@
 #include <cmath>
-//#include "lanczos.h"
+#include <cstdio>
+#include <iostream>
+#include <chrono>
+#include "lanczos.h"
 #include "wstTensor.h"
 #include "wstKernel.h"
+#include "wstModel.h"
 
 #define L 1.0
 #define NPTS 100 
@@ -89,14 +93,17 @@ void test1_3d()
   rho.create(v2r, x, y, z, NPTS, NPTS, NPTS, true, true, true);  
 
   wstKernel3D kernel = create_laplacian_7p_3d(hx, hy, hz);
-  wstTensor rho2 = kernel.apply(V);
-  wstTensor errorT = rho-rho2;
 
-  //print(rho, rho2, errorT);
+  const auto tstart = std::chrono::system_clock::now();
+  wstTensor rho2 = kernel.apply(V);
+  const auto tstop = std::chrono::system_clock::now();
+  const std::chrono::duration<double> time_elapsed = tstop - tstart;
+  wstTensor errorT = rho-rho2;
 
   double error = (rho-rho2).norm2();
 
   printf("Error is: %15.8e\n", error);
+  std::cout << "Elapsed time:  " << time_elapsed.count() << std::endl;
 }
 
 void test1_2d()
@@ -145,8 +152,34 @@ void test1_1d()
   printf("Error is: %15.8e\n", error);
 }
 
+void lanczos_test1_3d()
+{
+  vector<double> x = linspace(-L/2, L/2, NPTS);
+  vector<double> y = linspace(-L/2, L/2, NPTS);
+  vector<double> z = linspace(-L/2, L/2, NPTS);
+  double hx = std::abs(x[1]-x[0]);
+  double hy = std::abs(y[1]-y[0]);
+  double hz = std::abs(z[1]-z[0]);
+
+  wstTensor V;
+  V.create(v1, x, y, z, NPTS, NPTS, NPTS, true, true, true);  
+  wstKernel3D kernel = create_laplacian_7p_3d(hx, hy, hz);
+
+  const auto tstart = std::chrono::system_clock::now();
+  wstModel model(kernel, V);
+  //Lanczos<wstTensor,wstModel> lanczos(&model, 100);
+  //lanczos.run();
+  wstLanczos3D lanczos(V, hx, hy, hz);
+  lanczos.run();
+  const auto tstop = std::chrono::system_clock::now();
+  const std::chrono::duration<double> time_elapsed = tstop - tstart;
+
+  std::cout << "Elapsed time:  " << time_elapsed.count() << std::endl;
+}
+
 int main(int argc, char** argv)
 {
-  test1_3d(); 
+  lanczos_test1_3d(); 
+  //test1_3d();
   return 0;
 }

@@ -173,6 +173,22 @@ public:
     return sz;
   }
 
+  void empty() {
+    int sz = this->size();
+    for (int i = 0; i < sz; i++) {
+      _p[i] = 0.0;
+    }
+  }
+
+  void fillrandom() {
+    int sz = this->size();
+    for (int i = 0; i < sz; i++) {
+      int i1 = rand();
+      double t1 = (i1 % 100000000)/100000000.0;
+      _p[i] = t1;
+    }
+  }
+
   int periodic_index(int idx, int size) const {
     if (idx >= size) 
       return periodic_index(idx-size+1, size);
@@ -193,6 +209,10 @@ public:
     int sz = this->size();
     for (int i = 0; i < sz; i++)
       printf("%15.8e\n", _p[i]);
+  }
+
+  const double* ptr() {
+    return _p;
   }
 
   double& operator()(int i0) {
@@ -246,7 +266,7 @@ public:
   }
 
   // perform out-of-place a*(*this) + b*t
-  wstTensor gaxpy_oop(const double& a, const wstTensor& t, const double& b) {
+  wstTensor gaxpy_oop(const double& a, const wstTensor& t, const double& b) const {
     int sz1 = this->size();
     int sz2 = t.size();
     assert(sz1 == sz2);
@@ -255,15 +275,20 @@ public:
     return r;
   }
 
-  wstTensor operator+(const wstTensor& t) {
+  wstTensor operator+(const wstTensor& t) const {
     return gaxpy_oop(1.0, t, 1.0);
   }
 
-  wstTensor operator-(const wstTensor& t) {
+  wstTensor operator-(const wstTensor& t) const {
     return gaxpy_oop(1.0, t, -1.0);
   }
-  
-  double inner(const wstTensor& t) {
+ 
+  void scale(double a) {
+    int sz = this->size();
+    for (int i = 0; i < sz; i++) _p[i]*a;
+  }
+ 
+  double inner(const wstTensor& t) const {
     int sz1 = this->size();
     int sz2 = t.size();
     assert(sz1 == sz2);
@@ -278,6 +303,65 @@ public:
     for (int i = 0; i < sz; i++) rval += _p[i]*_p[i]; 
     return std::sqrt(rval);
   }
+
+  void normalize() {
+    double s = this->norm2();
+    this->scale(1./s); 
+  }
 };
+
+wstTensor gaxpy(const double& a, const wstTensor& T1, const double& b, const wstTensor& T2) {
+  return T1.gaxpy_oop(a, T2, b);
+}
+
+double inner(const wstTensor& t1, const wstTensor& t2) {
+  return t1.inner(t2);
+}
+
+double norm2(const wstTensor& t) {
+  return t.norm2();
+}
+
+// create an empty 1-D function
+wstTensor empty_function(int d0, bool periodic = false) {
+  wstTensor r;
+  r.create(d0, periodic);
+  r.empty();  
+}
+
+// create an empty 2-D function
+wstTensor empty_function(int d0, int d1, bool periodic0 = false, bool periodic1 = false) {
+  wstTensor r;
+  r.create(d0, d1, periodic0, periodic1);
+  r.empty();  
+}
+
+// create an empty 3-D function
+wstTensor empty_function(int d0, int d1, int d2, bool periodic0 = false, bool periodic1 = false, bool periodic2 = false) {
+  wstTensor r;
+  r.create(d0, d1, d2, periodic0, periodic1, periodic2);
+  r.empty();  
+}
+
+// create a random 1-D function (obviously cannot be periodic)
+wstTensor random_function(int d0, bool periodic = false) {
+  wstTensor r;
+  r.create(d0, periodic);
+  r.fillrandom();  
+}
+
+// create a random 2-D function (obviously cannot be periodic)
+wstTensor random_function(int d0, int d1, bool periodic0 = false, bool periodic1 = false) {
+  wstTensor r;
+  r.create(d0, d1, periodic0, periodic1);
+  r.fillrandom();  
+}
+
+// create a random 3-D function (obviously cannot be periodic)
+wstTensor random_function(int d0, int d1, int d2, bool periodic0 = false, bool periodic1 = false, bool periodic2 = false) {
+  wstTensor r;
+  r.create(d0, d1, d2, periodic0, periodic1, periodic2);
+  r.fillrandom();  
+}
 
 #endif

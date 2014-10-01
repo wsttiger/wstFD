@@ -8,7 +8,7 @@ using std::vector;
 
 class wstKernel {
   public:
-  virtual wstTensor apply(const wstTensor& t) = 0;
+  virtual wstTensor apply(const wstTensor& t) const = 0;
 };
 
 class wstKernel1D : public wstKernel {
@@ -53,7 +53,7 @@ public:
     _local = false;
   }
 
-  virtual wstTensor apply(const wstTensor& t) {
+  virtual wstTensor apply(const wstTensor& t) const {
     wstTensor r = copy(t,true);
     int d0 = t.dim(0); 
     int stsz = _stencil.size();
@@ -115,7 +115,7 @@ public:
     _local = false;
   }
 
-  virtual wstTensor apply(const wstTensor& t) {
+  virtual wstTensor apply(const wstTensor& t) const {
     wstTensor r = copy(t,true);
     int d0 = t.dim(0); int d1 = t.dim(1); 
     int stsz = _stencil.size();
@@ -182,20 +182,55 @@ public:
     _local = false;
   }
 
-  wstTensor apply(const wstTensor& t) {
+//  wstTensor apply(const wstTensor& t) const {
+//    wstTensor r = copy(t,true);
+//    int d0 = t.dim(0); int d1 = t.dim(1); int d2 = t.dim(2);
+//    int stsz = _stencil.size();
+//    // loop over points
+//    for (int i = 0; i < d0; i++) {
+//      for (int j = 0; j < d1; j++) {
+//        for (int k = 0; k < d2; k++) {
+//          double val = (_local) ? _localf(i,j,k)*t(i,j,k) : 0.0;
+//          for (int ist = 0; ist < stsz; ist++) {
+//            wstStencil3D st = _stencil[ist];
+//            val += st.c*t(i+st.x, j+st.y, k+st.z);
+//          }
+//          r(i,j,k) = val;
+//        }
+//      }
+//    }
+//    return r;
+//  }
+
+  wstTensor apply(const wstTensor& t) const {
+    wstTensor r = copy(t,true);
+    r.print();
+    return r;
+  }
+
+  wstTensor apply(const wstTensor& t, int tsize) const {
     wstTensor r = copy(t,true);
     int d0 = t.dim(0); int d1 = t.dim(1); int d2 = t.dim(2);
     int stsz = _stencil.size();
     // loop over points
-    for (int i = 0; i < d0; i++) {
-      for (int j = 0; j < d1; j++) {
-        for (int k = 0; k < d2; k++) {
-          double val = (_local) ? _localf(i,j,k)*t(i,j,k) : 0.0;
-          for (int ist = 0; ist < stsz; ist++) {
-            wstStencil3D st = _stencil[ist];
-            val += st.c*t(i+st.x, j+st.y, k+st.z);
+    for (int itile = 0; itile < d0; itile+=tsize) {
+      int iend = std::min(itile+tsize, d0);
+      for (int jtile = 0; jtile < d1; jtile+=tsize) {
+        int jend = std::min(jtile+tsize, d1);
+        for (int ktile = 0; ktile < d2; ktile+=tsize) {
+          int kend = std::min(ktile+tsize, d2);
+          for (int i = itile; i < iend; i++) {
+            for (int j = jtile; j < jend; j++) {
+              for (int k = ktile; k < kend; k++) {
+                double val = (_local) ? _localf(i,j,k)*t(i,j,k) : 0.0;
+                for (int ist = 0; ist < stsz; ist++) {
+                  wstStencil3D st = _stencil[ist];
+                  val += st.c*t(i+st.x, j+st.y, k+st.z);
+                }
+                r(i,j,k) = val;
+              }
+            } 
           }
-          r(i,j,k) = val;
         }
       }
     }
@@ -376,6 +411,34 @@ wstKernel2D create_laplacian_7p_2d(double hx, double hy) {
   return kernel;
 }
 
+wstKernel3D create_laplacian_7p_3d(const wstTensor& localf, double hx, double hy, double hz) {
+  int offsets7p[7] = {-3, -2, -1, 0, 1, 2, 3};
+  double coeffs7p[7] = {2.0/180.0, -27.0/180.0, 270.0/180.0, -490.0/180.0, 270.0/180.0, -27.0/180.0, 2.0/180.0};
+  vector<int> xoffset7p(21,0); 
+  vector<int> yoffset7p(21,0); 
+  vector<int> zoffset7p(21,0);
+  vector<double> vcoeffs7p(21,0.0);
+  int p = 0;
+  for (int i = 0; i < 7; i++) {
+    xoffset7p[i+p] = offsets7p[i];   
+    vcoeffs7p[i+p] = coeffs7p[i]/hx/hx;
+  }
+  p += 7;
+  for (int i = 0; i < 7; i++) {
+    yoffset7p[i+p] = offsets7p[i];   
+    vcoeffs7p[i+p] = coeffs7p[i]/hy/hy;
+  }
+  p += 7;
+  for (int i = 0; i < 7; i++) {
+    zoffset7p[i+p] = offsets7p[i];   
+    vcoeffs7p[i+p] = coeffs7p[i]/hz/hz;
+  }
+
+  wstKernel3D kernel;
+  kernel.create(localf, xoffset7p, yoffset7p, zoffset7p, vcoeffs7p);
+  return kernel;
+}
+
 wstKernel3D create_laplacian_7p_3d(double hx, double hy, double hz) {
   int offsets7p[7] = {-3, -2, -1, 0, 1, 2, 3};
   double coeffs7p[7] = {2.0/180.0, -27.0/180.0, 270.0/180.0, -490.0/180.0, 270.0/180.0, -27.0/180.0, 2.0/180.0};
@@ -403,5 +466,52 @@ wstKernel3D create_laplacian_7p_3d(double hx, double hy, double hz) {
   kernel.create(xoffset7p, yoffset7p, zoffset7p, vcoeffs7p);
   return kernel;
 }
+
+// assuming periodic boundary conditions
+class wstLanczos3D {
+private:
+  int _dim0, _dim1, _dim2;
+  int _nsize;
+  wstKernel3D _kernel;
+  vector<double> _a;
+  vector<double> _b;
+  
+
+public:
+  wstLanczos3D(const wstTensor& localf, double hx, double hy, double hz, int nsize = 100)
+   : _dim0(localf.dim(0)), _dim1(localf.dim(1)), _dim2(localf.dim(2)), _nsize(nsize) {
+    _kernel = create_laplacian_7p_3d(localf, hx, hy, hz); 
+  }
+
+  void run() {
+    // assuming periodic boundary conditions
+    wstTensor vinit = random_function(_dim0, _dim1, _dim2, true, true, true);
+    wstTensor vold = empty_function(_dim0, _dim1, _dim2, true, true, true);
+
+    wstTensor v = copy(vinit,true);
+    _a = vector<double>(_nsize,0.0);
+    _b = vector<double>(_nsize-1,0.0);
+
+    wstTensor v2;
+    for (unsigned int i = 0; i <_nsize; i++) {
+      if (i > 0) {
+        v2 = gaxpy(1.0,_kernel.apply(v),-_b[i-1],vold);
+      }
+      else {
+        v2 = _kernel.apply(v);
+      }
+      _a[i] = inner(v, v2);
+      if (i < (_nsize-1))
+      {
+        v2 = gaxpy(1.0,v2,-_a[i],v);
+        _b[i] = norm2(v2);
+        vold = v;
+        v = v2;
+        v.scale(1./_b[i]);
+      }
+    }
+  }
+
+};
 
 #endif
