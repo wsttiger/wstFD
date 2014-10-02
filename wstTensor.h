@@ -16,6 +16,7 @@ private:
   // are the dimensions periodic?
   bool* _bc;
   // the data pointer
+  std::shared_ptr<double> _sp;
   double* _p;
   // is the tensor currently allocated?
   bool _allocated;
@@ -56,6 +57,7 @@ private:
       }
       int sz = r.size();
       r._p = new double[sz];
+      r._sp = std::shared_ptr<double>(r._p, [](double *p) {delete[] p;});
       if (empty) {
         for (int i = 0; i < sz; i++) {
           r._p[i] = 0.0;
@@ -76,11 +78,14 @@ public:
     : _ndim(0), _dims(0), _bc(0), _p(0),_allocated(false) {}
   
   virtual ~wstTensor() {
+    printf("(begin) wstTensor destructor called for %ld\n", this);
     if (_allocated) {
+      printf("wstTensor destructor [_dims] called for %ld\n", _dims);
       delete [] _dims;
+      printf("wstTensor destructor [_bc] called for %ld\n", _bc);
       delete [] _bc;
-      delete [] _p;
     }
+    printf("(end) wstTensor destructor called for %ld\n", this);
     _allocated = false;
     _ndim = 0;
   }
@@ -88,20 +93,21 @@ public:
   wstTensor& operator=(const wstTensor& t) {
     if (this != &t) {
       _ndim = t._ndim;
-      _dims = t._dims;
-      _bc = t._bc;
+      _dims = new int[_ndim];
+      _bc = new bool[_ndim];
+      for (int i = 0; i < _ndim; i++) {
+        _dims[i] = t._dims[i];
+        _bc[i] = t._bc[i];
+      }
       _p = t._p;
+      _sp = t._sp;
       _allocated = t._allocated;
     }
     return *this;
   }
 
   wstTensor(const wstTensor& t) {
-    _ndim = t._ndim;
-    _dims = t._dims;
-    _bc = t._bc;
-    _p = t._p;
-    _allocated = t._allocated;
+    (*this) = t;
   }
 
   void create(int d0, bool periodic = false) {
@@ -114,6 +120,7 @@ public:
     _bc[0] = periodic;
     // allocation
     _p = new double[d0];
+    _sp = std::shared_ptr<double>(_p, [](double *p) {delete[] p;});
     _allocated = true;
   }
 
@@ -132,6 +139,7 @@ public:
     _bc[0] = periodic0; _bc[1] = periodic1;
     // allocation
     _p = new double[d0*d1];
+    _sp = std::shared_ptr<double>(_p, [](double *p) {delete[] p;});
     _allocated = true;
   }
 
@@ -153,6 +161,7 @@ public:
     _bc[0] = periodic0; _bc[1] = periodic1; _bc[2] = periodic2;
     // allocation
     _p = new double[d0*d1*d2];
+    _sp = std::shared_ptr<double>(_p, [](double *p) {delete[] p;});
     _allocated = true;
   }
 
@@ -211,7 +220,11 @@ public:
       printf("%15.8e\n", _p[i]);
   }
 
-  const double* ptr() {
+  double* ptr() {
+    return _p;
+  }
+
+  const double* ptr() const {
     return _p;
   }
 

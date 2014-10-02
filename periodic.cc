@@ -166,11 +166,14 @@ void lanczos_test1_3d()
   wstKernel3D kernel = create_laplacian_7p_3d(hx, hy, hz);
 
   const auto tstart = std::chrono::system_clock::now();
-  wstModel model(kernel, V);
+  //wstModel model(kernel, V);
   //Lanczos<wstTensor,wstModel> lanczos(&model, 100);
   //lanczos.run();
+  printf("creating lanzcos\n");
   wstLanczos3D lanczos(V, hx, hy, hz);
+  printf("created lanzcos\n");
   lanczos.run();
+  printf("finished lanzcos\n");
   const auto tstop = std::chrono::system_clock::now();
   const std::chrono::duration<double> time_elapsed = tstop - tstart;
 

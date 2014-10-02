@@ -37,7 +37,7 @@ public:
               vector<int> xoffset,
               vector<double> coeffs) {
     
-    _localf = copy(localf);
+    _localf = localf;
     _stencil = vector<wstStencil1D>(xoffset.size());
     for (int i = 0; i < xoffset.size(); i++) 
       _stencil[i] = wstStencil1D(xoffset[i], coeffs[i]);
@@ -98,7 +98,7 @@ public:
               vector<int> yoffset,
               vector<double> coeffs) {
     
-    _localf = copy(localf);
+    _localf = localf;
     _stencil = vector<wstStencil2D>(xoffset.size());
     for (int i = 0; i < xoffset.size(); i++) 
       _stencil[i] = wstStencil2D(xoffset[i], yoffset[i],  coeffs[i]);
@@ -164,7 +164,7 @@ public:
               vector<int> zoffset,
               vector<double> coeffs) {
     
-    _localf = copy(localf);
+    _localf = localf;
     _stencil = vector<wstStencil3D>(xoffset.size());
     for (int i = 0; i < xoffset.size(); i++) 
       _stencil[i] = wstStencil3D(xoffset[i], yoffset[i], zoffset[i], coeffs[i]);
@@ -182,29 +182,24 @@ public:
     _local = false;
   }
 
-//  wstTensor apply(const wstTensor& t) const {
-//    wstTensor r = copy(t,true);
-//    int d0 = t.dim(0); int d1 = t.dim(1); int d2 = t.dim(2);
-//    int stsz = _stencil.size();
-//    // loop over points
-//    for (int i = 0; i < d0; i++) {
-//      for (int j = 0; j < d1; j++) {
-//        for (int k = 0; k < d2; k++) {
-//          double val = (_local) ? _localf(i,j,k)*t(i,j,k) : 0.0;
-//          for (int ist = 0; ist < stsz; ist++) {
-//            wstStencil3D st = _stencil[ist];
-//            val += st.c*t(i+st.x, j+st.y, k+st.z);
-//          }
-//          r(i,j,k) = val;
-//        }
-//      }
-//    }
-//    return r;
-//  }
-
   wstTensor apply(const wstTensor& t) const {
     wstTensor r = copy(t,true);
-    r.print();
+    int d0 = t.dim(0); int d1 = t.dim(1); int d2 = t.dim(2);
+    int stsz = _stencil.size();
+    printf("t dim0: %d     dim1: %d     dim2: %d\n", t.dim(0), t.dim(1), t.dim(2));
+    // loop over points
+    for (int i = 0; i < d0; i++) {
+      for (int j = 0; j < d1; j++) {
+        for (int k = 0; k < d2; k++) {
+          double val = (_local) ? _localf(i,j,k)*t(i,j,k) : 0.0;
+          for (int ist = 0; ist < stsz; ist++) {
+            wstStencil3D st = _stencil[ist];
+            val += st.c*t(i+st.x, j+st.y, k+st.z);
+          }
+          r(i,j,k) = val;
+        }
+      }
+    }
     return r;
   }
 
@@ -494,20 +489,33 @@ public:
 
     wstTensor v2;
     for (unsigned int i = 0; i <_nsize; i++) {
+      printf("running iteration i in Lanczos\n");
       if (i > 0) {
+      printf("1a\n");
         v2 = gaxpy(1.0,_kernel.apply(v),-_b[i-1],vold);
+      printf("1b\n");
       }
       else {
+      printf("2a\n");
         v2 = _kernel.apply(v);
+      printf("2b\n");
       }
+      printf("3a\n");
       _a[i] = inner(v, v2);
+      printf("3b\n");
       if (i < (_nsize-1))
       {
+        printf("4a\n");
         v2 = gaxpy(1.0,v2,-_a[i],v);
+        printf("5a\n");
         _b[i] = norm2(v2);
+        printf("6a\n");
         vold = v;
+        printf("7a\n");
         v = v2;
+        printf("8a\n");
         v.scale(1./_b[i]);
+        printf("9a\n");
       }
     }
   }
