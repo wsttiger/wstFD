@@ -152,6 +152,30 @@ void test1_1d()
   printf("Error is: %15.8e\n", error);
 }
 
+void lanczos_test1_1d()
+{
+  vector<double> x = linspace(-L/2, L/2, NPTS);
+  double hx = std::abs(x[1]-x[0]);
+
+  wstTensor V;
+  V.create(v1, x, NPTS, true);  
+  wstKernel1D kernel = create_laplacian_7p_1d(hx);
+
+  const auto tstart = std::chrono::system_clock::now();
+  //wstModel model(kernel, V);
+  //Lanczos<wstTensor,wstModel> lanczos(&model, 100);
+  //lanczos.run();
+  printf("creating lanzcos\n");
+  wstLanczos1D lanczos(V, hx);
+  printf("created lanzcos\n");
+  lanczos.run();
+  printf("finished lanzcos\n");
+  const auto tstop = std::chrono::system_clock::now();
+  const std::chrono::duration<double> time_elapsed = tstop - tstart;
+
+  std::cout << "Elapsed time:  " << time_elapsed.count() << std::endl;
+}
+
 void lanczos_test1_3d()
 {
   vector<double> x = linspace(-L/2, L/2, NPTS);
@@ -182,7 +206,7 @@ void lanczos_test1_3d()
 
 int main(int argc, char** argv)
 {
-  lanczos_test1_3d(); 
+  lanczos_test1_1d(); 
   //test1_3d();
   return 0;
 }

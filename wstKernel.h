@@ -6,6 +6,52 @@
 
 using std::vector;
 
+extern "C" void dsyev_(char *jobz, char *uplo, int *n, double *a,
+           int *lda, double *w, double *work, int *lwork,
+           int *info);
+
+//*****************************************************************************
+void diag_matrix(const vector<double>& mat, int n,
+                  vector<double>& e, vector <double>& evec)
+{
+  char jobz = 'V';
+  char uplo = 'U';
+  int info;
+  double* a = new double[n*n];
+  int lda = n;
+  int lwork = 3*n-1;
+  double *work = new double[lwork];
+  double *et = new double[n];
+  for (int i = 0; i < n*n; i++) a[i] = mat[i];
+
+  dsyev_(&jobz, &uplo, &n, a, &lda, et, work, &lwork, &info);
+
+  if (info != 0)
+  {
+    printf("[[Error:]] lapack::dsyev failed --- info = %d\n\n", info);
+  }
+  else
+  {
+    //printf("Eigenvalues:\n");
+    for (int i = 0; i < n; i++)
+    {
+      e[i] = et[i];
+    }
+    for (int i = 0; i < n; i++)
+    {
+      for (int j = 0; j < n; j++)
+      {
+        evec[j*n+i] = a[i*n+j];
+      }
+    }
+
+}
+  delete a;
+  delete work;
+  delete et;
+}
+//*****************************************************************************
+
 class wstKernel {
   public:
   virtual wstTensor apply(const wstTensor& t) const = 0;
@@ -39,7 +85,7 @@ public:
     
     _localf = localf;
     _stencil = vector<wstStencil1D>(xoffset.size());
-    for (int i = 0; i < xoffset.size(); i++) 
+    for (unsigned int i = 0; i < xoffset.size(); i++) 
       _stencil[i] = wstStencil1D(xoffset[i], coeffs[i]);
     _local = true;
   }
@@ -48,7 +94,7 @@ public:
   void create(vector<int> xoffset,
               vector<double> coeffs) {
     _stencil = vector<wstStencil1D>(xoffset.size());
-    for (int i = 0; i < xoffset.size(); i++) 
+    for (unsigned int i = 0; i < xoffset.size(); i++) 
       _stencil[i] = wstStencil1D(xoffset[i], coeffs[i]);
     _local = false;
   }
@@ -100,7 +146,7 @@ public:
     
     _localf = localf;
     _stencil = vector<wstStencil2D>(xoffset.size());
-    for (int i = 0; i < xoffset.size(); i++) 
+    for (unsigned int i = 0; i < xoffset.size(); i++) 
       _stencil[i] = wstStencil2D(xoffset[i], yoffset[i],  coeffs[i]);
     _local = true;
   }
@@ -110,7 +156,7 @@ public:
               vector<int> yoffset,
               vector<double> coeffs) {
     _stencil = vector<wstStencil2D>(xoffset.size());
-    for (int i = 0; i < xoffset.size(); i++) 
+    for (unsigned int i = 0; i < xoffset.size(); i++) 
       _stencil[i] = wstStencil2D(xoffset[i], yoffset[i], coeffs[i]);
     _local = false;
   }
@@ -166,7 +212,7 @@ public:
     
     _localf = localf;
     _stencil = vector<wstStencil3D>(xoffset.size());
-    for (int i = 0; i < xoffset.size(); i++) 
+    for (unsigned int i = 0; i < xoffset.size(); i++) 
       _stencil[i] = wstStencil3D(xoffset[i], yoffset[i], zoffset[i], coeffs[i]);
     _local = true;
   }
@@ -177,7 +223,7 @@ public:
               vector<int> zoffset,
               vector<double> coeffs) {
     _stencil = vector<wstStencil3D>(xoffset.size());
-    for (int i = 0; i < xoffset.size(); i++) 
+    for (unsigned int i = 0; i < xoffset.size(); i++) 
       _stencil[i] = wstStencil3D(xoffset[i], yoffset[i], zoffset[i], coeffs[i]);
     _local = false;
   }
@@ -368,6 +414,22 @@ wstKernel3D create_laplacian_5p_3d(double hx, double hy, double hz) {
   return kernel;
 }
 
+wstKernel1D create_laplacian_7p_1d(const wstTensor& localf, double hx) {
+  int offsets7p[7] = {-3, -2, -1, 0, 1, 2, 3};
+  double coeffs7p[7] = {2.0/180.0, -27.0/180.0, 270.0/180.0, -490.0/180.0, 270.0/180.0, -27.0/180.0, 2.0/180.0};
+  vector<int> xoffset7p(21,0); 
+  vector<double> vcoeffs7p(21,0.0);
+  int p = 0;
+  for (int i = 0; i < 7; i++) {
+    xoffset7p[i+p] = offsets7p[i];   
+    vcoeffs7p[i+p] = coeffs7p[i]/hx/hx;
+  }
+
+  wstKernel1D kernel;
+  kernel.create(localf, xoffset7p, vcoeffs7p);
+  return kernel;
+}
+
 wstKernel1D create_laplacian_7p_1d(double hx) {
   int offsets7p[7] = {-3, -2, -1, 0, 1, 2, 3};
   double coeffs7p[7] = {2.0/180.0, -27.0/180.0, 270.0/180.0, -490.0/180.0, 270.0/180.0, -27.0/180.0, 2.0/180.0};
@@ -463,6 +525,73 @@ wstKernel3D create_laplacian_7p_3d(double hx, double hy, double hz) {
 }
 
 // assuming periodic boundary conditions
+class wstLanczos1D {
+private:
+  int _dim0; 
+  int _nsize;
+  wstKernel1D _kernel;
+  vector<double> _a;
+  vector<double> _b;
+  
+
+public:
+  wstLanczos1D(const wstTensor& localf, double hx, int nsize = 30)
+   : _dim0(localf.dim(0)), _nsize(nsize) {
+    _kernel = create_laplacian_7p_1d(localf, hx); 
+  }
+
+  void run() {
+    // assuming periodic boundary conditions
+    wstTensor vinit = random_function(_dim0, true);
+    wstTensor vold = empty_function(_dim0, true);
+
+    wstTensor v = copy(vinit,false);
+    _a = vector<double>(_nsize,0.0);
+    _b = vector<double>(_nsize-1,0.0);
+
+    wstTensor v2 = copy(vinit,true);
+    for (int i = 0; i <_nsize; i++) {
+      printf("running iteration %d in Lanczos\n", i);
+      if (i > 0) {
+        v2 = gaxpy(1.0,_kernel.apply(v),-_b[i-1],vold);
+      }
+      else {
+        v2 = _kernel.apply(v);
+      }
+      _a[i] = inner(v, v2);
+      if (i < (_nsize-1))
+      {
+        v2 = gaxpy(1.0,v2,-_a[i],v);
+        _b[i] = norm2(v2);
+        vold = v;
+        v = v2;
+        v.scale(1./_b[i]);
+      }
+    }
+    printf("\nMatrix elements in Lanczos basis:\n");
+    for (int i = 0; i < _nsize; i++) {
+      if (i < (_nsize-1))
+        printf("%15.8f          %15.8f\n", _a[i], _b[i]);
+      else
+        printf("%15.8f          %15.8f\n", _a[i], 0.0);
+    }
+    vector<double> mat(_nsize*_nsize,0.0);
+    for (int i = 0; i < _nsize-1; i++)
+    {
+      mat[i*_nsize+i] = _a[i];
+      mat[i*_nsize+i+1] = _b[i];
+      mat[(i+1)*_nsize+i] = _b[i];
+    }
+    mat[_nsize*_nsize-1] = _a[_nsize-1];
+
+    std::vector<double> e = vector<double>(_nsize,0.0);
+    std::vector<double> ev = vector<double>(_nsize*_nsize, 0.0);
+    diag_matrix(mat,_nsize,e,ev);
+    printf("Lanczos: lowest eigenvalue is %15.8f\n\n", e[0]);
+  }
+};
+
+// assuming periodic boundary conditions
 class wstLanczos3D {
 private:
   int _dim0, _dim1, _dim2;
@@ -471,7 +600,6 @@ private:
   vector<double> _a;
   vector<double> _b;
   
-
 public:
   wstLanczos3D(const wstTensor& localf, double hx, double hy, double hz, int nsize = 100)
    : _dim0(localf.dim(0)), _dim1(localf.dim(1)), _dim2(localf.dim(2)), _nsize(nsize) {
@@ -487,39 +615,46 @@ public:
     _a = vector<double>(_nsize,0.0);
     _b = vector<double>(_nsize-1,0.0);
 
-    wstTensor v2;
-    for (unsigned int i = 0; i <_nsize; i++) {
-      printf("running iteration i in Lanczos\n");
+    wstTensor v2 = copy(vinit,true);
+    for (int i = 0; i <_nsize; i++) {
+      printf("running iteration %d in Lanczos\n", i);
       if (i > 0) {
-      printf("1a\n");
         v2 = gaxpy(1.0,_kernel.apply(v),-_b[i-1],vold);
-      printf("1b\n");
       }
       else {
-      printf("2a\n");
         v2 = _kernel.apply(v);
-      printf("2b\n");
       }
-      printf("3a\n");
       _a[i] = inner(v, v2);
-      printf("3b\n");
       if (i < (_nsize-1))
       {
-        printf("4a\n");
         v2 = gaxpy(1.0,v2,-_a[i],v);
-        printf("5a\n");
         _b[i] = norm2(v2);
-        printf("6a\n");
         vold = v;
-        printf("7a\n");
         v = v2;
-        printf("8a\n");
         v.scale(1./_b[i]);
-        printf("9a\n");
       }
     }
-  }
+    printf("\nMatrix elements in Lanczos basis:\n");
+    for (int i = 0; i < _nsize; i++) {
+      if (i < (_nsize-1))
+        printf("%15.8f          %15.8f\n", _a[i], _b[i]);
+      else
+        printf("%15.8f          %15.8f\n", _a[i], 0.0);
+    }
+    vector<double> mat(_nsize*_nsize,0.0);
+    for (int i = 0; i < _nsize-1; i++)
+    {
+      mat[i*_nsize+i] = _a[i];
+      mat[i*_nsize+i+1] = _b[i];
+      mat[(i+1)*_nsize+i] = _b[i];
+    }
+    mat[_nsize*_nsize-1] = _a[_nsize-1];
 
+    std::vector<double> e = vector<double>(_nsize,0.0);
+    std::vector<double> ev = vector<double>(_nsize*_nsize, 0.0);
+    diag_matrix(mat,_nsize,e,ev);
+    printf("Lanczos: lowest eigenvalue is %15.8f\n\n", e[0]);
+  }
 };
 
 #endif

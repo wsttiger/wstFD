@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <cassert>
+#include <memory>
 
 using std::vector;
 using std::pair;
@@ -12,9 +13,9 @@ private:
   // number of dimensions
   int _ndim;
   // array holding the dimensions
-  int* _dims;
+  std::vector<int> _dims;
   // are the dimensions periodic?
-  bool* _bc;
+  std::vector<bool> _bc;
   // the data pointer
   std::shared_ptr<double> _sp;
   double* _p;
@@ -28,19 +29,19 @@ private:
   }
 
   friend void print(const wstTensor& t1, const wstTensor& t2) {
-    int sz1 = t1.size(); int sz2 = t2.size();
+    int sz1 = t1.size(); 
     for (int i = 0; i < sz1; i++)
       printf("%15.10f     %15.10f\n", t1._p[i], t2._p[i]);
   }
 
   friend void print(const wstTensor& t1, const wstTensor& t2, const wstTensor& t3) {
-    int sz1 = t1.size(); int sz2 = t2.size();
+    int sz1 = t1.size(); 
     for (int i = 0; i < sz1; i++)
       printf("%15.10f     %15.10f     %15.10f\n", t1._p[i], t2._p[i], t3._p[i]);
   }
 
   friend void print(const wstTensor& t1, const wstTensor& t2, const wstTensor& t3, const wstTensor& t4) {
-    int sz1 = t1.size(); int sz2 = t2.size();
+    int sz1 = t1.size(); 
     for (int i = 0; i < sz1; i++)
       printf("%15.10f     %15.10f     %15.10f     %15.10f\n", t1._p[i], t2._p[i], t3._p[i], t4._p[i]);
   }
@@ -49,12 +50,8 @@ private:
     wstTensor r;
     if (t._allocated) {
       r._ndim = t._ndim; 
-      r._dims = new int[r._ndim];
-      r._bc = new bool[r._ndim];
-      for (int i = 0; i < r._ndim; i++) {
-        r._dims[i] = t._dims[i];
-        r._bc[i] = t._bc[i];
-      }
+      r._dims = t._dims;
+      r._bc = t._bc;
       int sz = r.size();
       r._p = new double[sz];
       r._sp = std::shared_ptr<double>(r._p, [](double *p) {delete[] p;});
@@ -75,17 +72,9 @@ private:
 
 public:
   wstTensor() 
-    : _ndim(0), _dims(0), _bc(0), _p(0),_allocated(false) {}
+    : _ndim(0), _dims(std::vector<int>(0)), _bc(std::vector<bool>(false)), _p(0),_allocated(false) {}
   
   virtual ~wstTensor() {
-    printf("(begin) wstTensor destructor called for %ld\n", this);
-    if (_allocated) {
-      printf("wstTensor destructor [_dims] called for %ld\n", _dims);
-      delete [] _dims;
-      printf("wstTensor destructor [_bc] called for %ld\n", _bc);
-      delete [] _bc;
-    }
-    printf("(end) wstTensor destructor called for %ld\n", this);
     _allocated = false;
     _ndim = 0;
   }
@@ -93,12 +82,8 @@ public:
   wstTensor& operator=(const wstTensor& t) {
     if (this != &t) {
       _ndim = t._ndim;
-      _dims = new int[_ndim];
-      _bc = new bool[_ndim];
-      for (int i = 0; i < _ndim; i++) {
-        _dims[i] = t._dims[i];
-        _bc[i] = t._bc[i];
-      }
+      _dims = t._dims;
+      _bc = t._bc;
       _p = t._p;
       _sp = t._sp;
       _allocated = t._allocated;
@@ -113,11 +98,9 @@ public:
   void create(int d0, bool periodic = false) {
     // dims
     _ndim = 1;
-    _dims = new int[_ndim];
-    _dims[0] = d0;
+    _dims = vector<int>(1,d0);
     // boundary conditions
-    _bc = new bool[_ndim];
-    _bc[0] = periodic;
+    _bc = std::vector<bool>(1,periodic);
     // allocation
     _p = new double[d0];
     _sp = std::shared_ptr<double>(_p, [](double *p) {delete[] p;});
@@ -132,10 +115,10 @@ public:
   void create(int d0, int d1, bool periodic0 = false, bool periodic1 = false) {
     // dims
     _ndim = 2;
-    _dims = new int[_ndim];
+    _dims = std::vector<int>(_ndim,0);
     _dims[0] = d0; _dims[1] = d1;
     // boundary conditions
-    _bc = new bool[_ndim];
+    _bc = std::vector<bool>(_ndim,false);
     _bc[0] = periodic0; _bc[1] = periodic1;
     // allocation
     _p = new double[d0*d1];
@@ -154,10 +137,10 @@ public:
   void create(int d0, int d1, int d2, bool periodic0 = false, bool periodic1 = false, bool periodic2 = false) {
     // dims
     _ndim = 3;
-    _dims = new int[_ndim];
+    _dims = std::vector<int>(_ndim,0);
     _dims[0] = d0; _dims[1] = d1; _dims[2] = d2;
     // boundary conditions
-    _bc = new bool[_ndim];
+    _bc = std::vector<bool>(_ndim,false);
     _bc[0] = periodic0; _bc[1] = periodic1; _bc[2] = periodic2;
     // allocation
     _p = new double[d0*d1*d2];
@@ -298,7 +281,7 @@ public:
  
   void scale(double a) {
     int sz = this->size();
-    for (int i = 0; i < sz; i++) _p[i]*a;
+    for (int i = 0; i < sz; i++) _p[i] *= a;
   }
  
   double inner(const wstTensor& t) const {
@@ -340,6 +323,7 @@ wstTensor empty_function(int d0, bool periodic = false) {
   wstTensor r;
   r.create(d0, periodic);
   r.empty();  
+  return r;
 }
 
 // create an empty 2-D function
@@ -347,6 +331,7 @@ wstTensor empty_function(int d0, int d1, bool periodic0 = false, bool periodic1 
   wstTensor r;
   r.create(d0, d1, periodic0, periodic1);
   r.empty();  
+  return r;
 }
 
 // create an empty 3-D function
@@ -354,6 +339,7 @@ wstTensor empty_function(int d0, int d1, int d2, bool periodic0 = false, bool pe
   wstTensor r;
   r.create(d0, d1, d2, periodic0, periodic1, periodic2);
   r.empty();  
+  return r;
 }
 
 // create a random 1-D function (obviously cannot be periodic)
@@ -361,6 +347,7 @@ wstTensor random_function(int d0, bool periodic = false) {
   wstTensor r;
   r.create(d0, periodic);
   r.fillrandom();  
+  return r;
 }
 
 // create a random 2-D function (obviously cannot be periodic)
@@ -368,6 +355,7 @@ wstTensor random_function(int d0, int d1, bool periodic0 = false, bool periodic1
   wstTensor r;
   r.create(d0, d1, periodic0, periodic1);
   r.fillrandom();  
+  return r;
 }
 
 // create a random 3-D function (obviously cannot be periodic)
@@ -375,6 +363,7 @@ wstTensor random_function(int d0, int d1, int d2, bool periodic0 = false, bool p
   wstTensor r;
   r.create(d0, d1, d2, periodic0, periodic1, periodic2);
   r.fillrandom();  
+  return r;
 }
 
 #endif
