@@ -4,6 +4,7 @@
 #include <vector>
 #include <cassert>
 #include <memory>
+#include "wstUtils.h"
 
 using std::vector;
 using std::pair;
@@ -24,24 +25,40 @@ private:
 
   friend void print(const wstTensor& t1) {
     int sz1 = t1.size();
+    printf("# dims:  %d\n", t1._ndim);
+    for (unsigned int i = 0; i < t1._dims.size(); i++) {
+        printf("%d\n", t1._dims[i]); 
+    }
     for (int i = 0; i < sz1; i++)
       printf("%15.10f   \n", t1._p[i]);
   }
 
   friend void print(const wstTensor& t1, const wstTensor& t2) {
     int sz1 = t1.size(); 
+    printf("# dims:  %d\n", t1._ndim);
+    for (unsigned int i = 0; i < t1._dims.size(); i++) {
+        printf("%d     %d\n", t1._dims[i], t2._dims[i]); 
+    }
     for (int i = 0; i < sz1; i++)
       printf("%15.10f     %15.10f\n", t1._p[i], t2._p[i]);
   }
 
   friend void print(const wstTensor& t1, const wstTensor& t2, const wstTensor& t3) {
     int sz1 = t1.size(); 
+    printf("# dims:  %d\n", t1._ndim);
+    for (unsigned int i = 0; i < t1._dims.size(); i++) {
+        printf("%d     %d     %d\n", t1._dims[i], t2._dims[i], t3._dims[i]); 
+    }
     for (int i = 0; i < sz1; i++)
       printf("%15.10f     %15.10f     %15.10f\n", t1._p[i], t2._p[i], t3._p[i]);
   }
 
   friend void print(const wstTensor& t1, const wstTensor& t2, const wstTensor& t3, const wstTensor& t4) {
     int sz1 = t1.size(); 
+    printf("# dims:  %d\n", t1._ndim);
+    for (unsigned int i = 0; i < t1._dims.size(); i++) {
+        printf("%d     %d     %d     %d\n", t1._dims[i], t2._dims[i], t3._dims[i], t4._dims[i]); 
+    }
     for (int i = 0; i < sz1; i++)
       printf("%15.10f     %15.10f     %15.10f     %15.10f\n", t1._p[i], t2._p[i], t3._p[i], t4._p[i]);
   }
@@ -172,6 +189,13 @@ public:
     }
   }
 
+  void value(double val) {
+    int sz = this->size();
+    for (int i = 0; i < sz; i++) {
+      _p[i] = val;
+    }
+  }
+
   void fillrandom() {
     int sz = this->size();
     for (int i = 0; i < sz; i++) {
@@ -179,15 +203,6 @@ public:
       double t1 = (i1 % 100000000)/100000000.0;
       _p[i] = t1;
     }
-  }
-
-  int periodic_index(int idx, int size) const {
-    if (idx >= size) 
-      return periodic_index(idx-size+1, size);
-    else if (idx < 0) 
-      return periodic_index(idx+size-1, size);
-    else
-      return idx;
   }
 
   int ndim() const {return _ndim;}
@@ -213,43 +228,43 @@ public:
 
   double& operator()(int i0) {
     assert(_ndim == 1);
-    int idx0 = (_bc[0]) ? periodic_index(i0, _dims[0]) : i0;
+    int idx0 = (_bc[0]) ? wstUtils::periodic_index(i0, _dims[0]) : i0;
     return _p[idx0];
   }
 
   const double& operator()(int i0) const {
     assert(_ndim == 1);
-    int idx0 = (_bc[0]) ? periodic_index(i0, _dims[0]) : i0;
+    int idx0 = (_bc[0]) ? wstUtils::periodic_index(i0, _dims[0]) : i0;
     return _p[idx0];
   }
 
   double& operator()(int i0, int i1) {
     assert(_ndim == 2);
-    int idx0 = (_bc[0]) ? periodic_index(i0, _dims[0]) : i0;
-    int idx1 = (_bc[1]) ? periodic_index(i1, _dims[1]) : i1;
+    int idx0 = (_bc[0]) ? wstUtils::periodic_index(i0, _dims[0]) : i0;
+    int idx1 = (_bc[1]) ? wstUtils::periodic_index(i1, _dims[1]) : i1;
     return _p[idx0*_dims[1]+idx1];
   }
 
   double& operator()(int i0, int i1) const {
     assert(_ndim == 2);
-    int idx0 = (_bc[0]) ? periodic_index(i0, _dims[0]) : i0;
-    int idx1 = (_bc[1]) ? periodic_index(i1, _dims[1]) : i1;
+    int idx0 = (_bc[0]) ? wstUtils::periodic_index(i0, _dims[0]) : i0;
+    int idx1 = (_bc[1]) ? wstUtils::periodic_index(i1, _dims[1]) : i1;
     return _p[idx0*_dims[1]+idx1];
   }
 
   double& operator()(int i0, int i1, int i2) {
     assert(_ndim == 3);
-    int idx0 = (_bc[0]) ? periodic_index(i0, _dims[0]) : i0;
-    int idx1 = (_bc[1]) ? periodic_index(i1, _dims[1]) : i1;
-    int idx2 = (_bc[2]) ? periodic_index(i2, _dims[2]) : i2;
+    int idx0 = (_bc[0]) ? wstUtils::periodic_index(i0, _dims[0]) : i0;
+    int idx1 = (_bc[1]) ? wstUtils::periodic_index(i1, _dims[1]) : i1;
+    int idx2 = (_bc[2]) ? wstUtils::periodic_index(i2, _dims[2]) : i2;
     return _p[idx0*_dims[1]*_dims[2]+idx1*_dims[2]+idx2];
   }
 
   double& operator()(int i0, int i1, int i2) const {
     assert(_ndim == 3);
-    int idx0 = (_bc[0]) ? periodic_index(i0, _dims[0]) : i0;
-    int idx1 = (_bc[1]) ? periodic_index(i1, _dims[1]) : i1;
-    int idx2 = (_bc[2]) ? periodic_index(i2, _dims[2]) : i2;
+    int idx0 = (_bc[0]) ? wstUtils::periodic_index(i0, _dims[0]) : i0;
+    int idx1 = (_bc[1]) ? wstUtils::periodic_index(i1, _dims[1]) : i1;
+    int idx2 = (_bc[2]) ? wstUtils::periodic_index(i2, _dims[2]) : i2;
     return _p[idx0*_dims[1]*_dims[2]+idx1*_dims[2]+idx2];
   }
 
@@ -339,6 +354,30 @@ wstTensor empty_function(int d0, int d1, int d2, bool periodic0 = false, bool pe
   wstTensor r;
   r.create(d0, d1, d2, periodic0, periodic1, periodic2);
   r.empty();  
+  return r;
+}
+
+// create an constant 1-D function
+wstTensor constant_function(int d0, double val, bool periodic = false) {
+  wstTensor r;
+  r.create(d0, periodic);
+  r.value(val);  
+  return r;
+}
+
+// create an constant 2-D function
+wstTensor constant_function(int d0, int d1, double val, bool periodic0 = false, bool periodic1 = false) {
+  wstTensor r;
+  r.create(d0, d1, periodic0, periodic1);
+  r.value(val);  
+  return r;
+}
+
+// create an constant 3-D function
+wstTensor constant_function(int d0, int d1, int d2, double val, bool periodic0 = false, bool periodic1 = false, bool periodic2 = false) {
+  wstTensor r;
+  r.create(d0, d1, d2, periodic0, periodic1, periodic2);
+  r.value(val);  
   return r;
 }
 

@@ -6,23 +6,12 @@
 #include "wstTensor.h"
 #include "wstKernel.h"
 #include "wstModel.h"
+#include "wstUtils.h"
 
-#define L 1.0
-#define NPTS 100 
+#define L 5.0
+#define NPTS 50
 #define alpha 2.5
 #define PI 3.141592653589793238
-
-vector<double> linspace(double start, double end, int npts)
-{
-   double delx = (end-start)/(npts-1);
-   vector<double> t(npts);
-   double s1 = start;
-   for (int i = 0; i < npts; i++)
-   {
-     t[i] = s1+i*delx;
-   }
-   return t;
-}
 
 inline
 double v1(double x)
@@ -80,9 +69,9 @@ double v2r(double x, double y, double z)
 
 void test1_3d()
 {
-  vector<double> x = linspace(-L/2, L/2, NPTS);
-  vector<double> y = linspace(-L/2, L/2, NPTS);
-  vector<double> z = linspace(-L/2, L/2, NPTS);
+  vector<double> x = wstUtils::linspace(-L/2, L/2, NPTS);
+  vector<double> y = wstUtils::linspace(-L/2, L/2, NPTS);
+  vector<double> z = wstUtils::linspace(-L/2, L/2, NPTS);
   double hx = std::abs(x[1]-x[0]);
   double hy = std::abs(y[1]-y[0]);
   double hz = std::abs(z[1]-z[0]);
@@ -108,8 +97,8 @@ void test1_3d()
 
 void test1_2d()
 {
-  vector<double> x = linspace(-L/2, L/2, NPTS);
-  vector<double> y = linspace(-L/2, L/2, NPTS);
+  vector<double> x = wstUtils::linspace(-L/2, L/2, NPTS);
+  vector<double> y = wstUtils::linspace(-L/2, L/2, NPTS);
   double hx = std::abs(x[1]-x[0]);
   double hy = std::abs(y[1]-y[0]);
 
@@ -132,16 +121,19 @@ void test1_2d()
 void test1_1d()
 
 {
-  vector<double> x = linspace(-L/2, L/2, NPTS);
+  vector<double> x = wstUtils::linspace(-L/2, L/2, NPTS);
   double hx = std::abs(x[1]-x[0]);
 
-  
+  for (unsigned int i = 0; i < x.size(); i++) {
+    printf("%15.5f\n", x[i]);
+  }
+  printf("\n\n");
   wstTensor V;
   V.create(v2, x, NPTS, true);
   wstTensor rho;
   rho.create(v2r, x, NPTS, true);  
 
-  wstKernel1D kernel = create_laplacian_7p_1d(hx);
+  wstKernel1D kernel = create_laplacian_7p_1d(hx, false);
   wstTensor rho2 = kernel.apply(V);
   wstTensor errorT = rho-rho2;
 
@@ -154,9 +146,9 @@ void test1_1d()
 
 void lanczos_test1_1d()
 {
-  vector<double> x = linspace(-L/2, L/2, NPTS);
+  vector<double> x = wstUtils::linspace(-L/2, L/2, NPTS);
   double hx = std::abs(x[1]-x[0]);
-
+  
   wstTensor V;
   V.create(v1, x, NPTS, true);  
   wstKernel1D kernel = create_laplacian_7p_1d(hx);
@@ -166,7 +158,7 @@ void lanczos_test1_1d()
   //Lanczos<wstTensor,wstModel> lanczos(&model, 100);
   //lanczos.run();
   printf("creating lanzcos\n");
-  wstLanczos1D lanczos(V, hx);
+  wstLanczos1D lanczos(V, hx, 40);
   printf("created lanzcos\n");
   lanczos.run();
   printf("finished lanzcos\n");
@@ -178,9 +170,9 @@ void lanczos_test1_1d()
 
 void lanczos_test1_3d()
 {
-  vector<double> x = linspace(-L/2, L/2, NPTS);
-  vector<double> y = linspace(-L/2, L/2, NPTS);
-  vector<double> z = linspace(-L/2, L/2, NPTS);
+  vector<double> x = wstUtils::linspace(-L/2, L/2, NPTS);
+  vector<double> y = wstUtils::linspace(-L/2, L/2, NPTS);
+  vector<double> z = wstUtils::linspace(-L/2, L/2, NPTS);
   double hx = std::abs(x[1]-x[0]);
   double hy = std::abs(y[1]-y[0]);
   double hz = std::abs(z[1]-z[0]);
@@ -207,6 +199,6 @@ void lanczos_test1_3d()
 int main(int argc, char** argv)
 {
   lanczos_test1_1d(); 
-  //test1_3d();
+  //test1_1d();
   return 0;
 }
