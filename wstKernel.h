@@ -72,12 +72,7 @@ public:
     wstTensor r = copy(t,true);
     int d0 = t.dim(0); 
     int stsz = _stencil.size();
-      for (int ist = 0; ist < stsz; ist++) {
-        wstStencil1D st = _stencil[ist];
-        //printf("stencil:     %d     %15.4f\n", st.x, st.c);
-      }
 
-    //print(_localf, t, r); printf("\n");
     // loop over points
     for (int i = 0; i < d0; i++) {
       double val = (_local) ? _localf(i)*t(i) : 0.0;
@@ -85,14 +80,10 @@ public:
         wstStencil1D st = _stencil[ist];
         val += st.c*t(i+st.x);
         if (i == 0) {
-          //printf("wstKernel1D::apply  ist: %d     st.x: %d     st.c: %15.5f     t(i+st.x): %15.8f     val: %15.8f\n",
-          //  ist, st.x, st.c, t(i+st.x), val);
         }
       }
-      //printf("wstKernel1D::apply -- %15.8f     %15.8f     %15.8f\n", _localf(i), t(i), val);
       r(i) = val;
     }
-    //assert(false);
     return r;
   }
 };
