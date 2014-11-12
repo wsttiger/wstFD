@@ -124,7 +124,7 @@ public:
     _allocated = true;
   }
 
-  void create(double (*f)(double), const vector<double>& x, int d0, bool periodic = false) {
+  void create(std::function<double (double)> f, const vector<double>& x, int d0, bool periodic = false) {
     create(d0, periodic);
     for (int i = 0; i < d0; i++) _p[i] = f(x[i]);
   }
@@ -143,7 +143,7 @@ public:
     _allocated = true;
   }
 
-  void create(double (*f)(double, double), const vector<double>& x, const vector<double>& y, 
+  void create(std::function<double (double, double)> f, const vector<double>& x, const vector<double>& y, 
               int d0, int d1, bool periodic0 = false, bool periodic1 = false) {
     create(d0, d1, periodic0, periodic1);
     for (int i = 0; i < d0; i++)
@@ -165,7 +165,7 @@ public:
     _allocated = true;
   }
 
-  void create(double (*f)(double, double, double), 
+  void create(std::function<double (double, double, double)> f, 
               const vector<double>& x, const vector<double>& y, const vector<double>& z, 
               int d0, int d1, int d2, 
               bool periodic0 = false, bool periodic1 = false, bool periodic2 = false) {
