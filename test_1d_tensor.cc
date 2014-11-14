@@ -6,7 +6,6 @@
 #include "lanczos.h"
 #include "wstTensor.h"
 #include "wstKernel.h"
-#include "wstModel.h"
 #include "wstUtils.h"
 
 #define PI 3.141592653589793238
@@ -37,14 +36,14 @@ bool test_7_pts_lap_1d()
   vector<double> x = wstUtils::linspace(-L/2, L/2, NPTS);
   double hx = std::abs(x[1]-x[0]);
 
-  wstTensor V;
+  wstTensorT<double> V;
   V.create(std::bind(v2, L, std::placeholders::_1), x, NPTS, true);
-  wstTensor rho;
+  wstTensorT<double> rho;
   rho.create(std::bind(v2r, L, std::placeholders::_1), x, NPTS, true);  
 
-  wstKernel1D kernel = create_laplacian_7p_1d(hx);
-  wstTensor rho2 = kernel.apply(V);
-  wstTensor errorT = rho-rho2;
+  wstKernel1D<double> kernel = create_laplacian_7p_1d(hx);
+  wstTensorT<double> rho2 = kernel.apply(V);
+  wstTensorT<double> errorT = rho-rho2;
   double error = (rho-rho2).norm2()*L/NPTS;
   return (error < 1.e-10);
 }
@@ -57,14 +56,14 @@ bool test_5_pts_lap_1d()
   vector<double> x = wstUtils::linspace(-L/2, L/2, NPTS);
   double hx = std::abs(x[1]-x[0]);
 
-  wstTensor V;
+  wstTensorT<double> V;
   V.create(std::bind(v2, L, std::placeholders::_1), x, NPTS, true);
-  wstTensor rho;
+  wstTensorT<double> rho;
   rho.create(std::bind(v2r, L, std::placeholders::_1), x, NPTS, true);  
 
-  wstKernel1D kernel = create_laplacian_5p_1d(hx);
-  wstTensor rho2 = kernel.apply(V);
-  wstTensor errorT = rho-rho2;
+  wstKernel1D<double> kernel = create_laplacian_5p_1d(hx);
+  wstTensorT<double> rho2 = kernel.apply(V);
+  wstTensorT<double> errorT = rho-rho2;
 
   double error = (rho-rho2).norm2()*L/NPTS;
   return (error < 1.e-7);
@@ -78,14 +77,14 @@ bool test_3_pts_lap_1d()
   vector<double> x = wstUtils::linspace(-L/2, L/2, NPTS);
   double hx = std::abs(x[1]-x[0]);
 
-  wstTensor V;
+  wstTensorT<double> V;
   V.create(std::bind(v2, L, std::placeholders::_1), x, NPTS, true);
-  wstTensor rho;
+  wstTensorT<double> rho;
   rho.create(std::bind(v2r, L, std::placeholders::_1), x, NPTS, true);  
 
-  wstKernel1D kernel = create_laplacian_3p_1d(hx);
-  wstTensor rho2 = kernel.apply(V);
-  wstTensor errorT = rho-rho2;
+  wstKernel1D<double> kernel = create_laplacian_3p_1d(hx);
+  wstTensorT<double> rho2 = kernel.apply(V);
+  wstTensorT<double> errorT = rho-rho2;
 
   double error = (rho-rho2).norm2()*L/NPTS;
   return (error < 1.e-4);
@@ -100,13 +99,13 @@ bool test_3_pts_lap_1d()
 //  vector<double> x = wstUtils::linspace(-L/2, L/2, NPTS);
 //  double hx = std::abs(x[1]-x[0]);
 //  
-//  wstTensor V;
+//  wstTensorT<double> V;
 //  V.create(v1, x, NPTS, true);  
 //  wstKernel1D kernel = create_laplacian_7p_1d(hx);
 //
 //  const auto tstart = std::chrono::system_clock::now();
 //  //wstModel model(kernel, V);
-//  //Lanczos<wstTensor,wstModel> lanczos(&model, 100);
+//  //Lanczos<wstTensorT<double>,wstModel> lanczos(&model, 100);
 //  //lanczos.run();
 //  printf("creating lanzcos\n");
 //  wstLanczos1D lanczos(V, hx, 40);

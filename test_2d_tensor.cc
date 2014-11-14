@@ -6,7 +6,6 @@
 #include "lanczos.h"
 #include "wstTensor.h"
 #include "wstKernel.h"
-#include "wstModel.h"
 #include "wstUtils.h"
 
 #define PI 3.141592653589793238
@@ -39,14 +38,14 @@ bool test_7_pts_lap_2d()
   double hx = std::abs(x[1]-x[0]);
   double hy = std::abs(y[1]-y[0]);
 
-  wstTensor V;
+  wstTensorT<double> V;
   V.create(std::bind(v2, L, std::placeholders::_1, std::placeholders::_2), x, y, NPTS, NPTS, true, true);
-  wstTensor rho;
+  wstTensorT<double> rho;
   rho.create(std::bind(v2r, L, std::placeholders::_1, std::placeholders::_2), x, y, NPTS, NPTS, true, true);
 
-  wstKernel2D kernel = create_laplacian_7p_2d(hx, hy);
-  wstTensor rho2 = kernel.apply(V);
-  wstTensor errorT = rho-rho2;
+  wstKernel2D<double> kernel = create_laplacian_7p_2d(hx, hy);
+  wstTensorT<double> rho2 = kernel.apply(V);
+  wstTensorT<double> errorT = rho-rho2;
   double error = (rho-rho2).norm2()*L/NPTS;
   return (error < 1.e-10);
 }
@@ -61,14 +60,14 @@ bool test_5_pts_lap_2d()
   double hx = std::abs(x[1]-x[0]);
   double hy = std::abs(y[1]-y[0]);
 
-  wstTensor V;
+  wstTensorT<double> V;
   V.create(std::bind(v2, L, std::placeholders::_1, std::placeholders::_2), x, y, NPTS, NPTS, true, true);
-  wstTensor rho;
+  wstTensorT<double> rho;
   rho.create(std::bind(v2r, L, std::placeholders::_1, std::placeholders::_2), x, y, NPTS, NPTS, true, true);
 
-  wstKernel2D kernel = create_laplacian_5p_2d(hx, hy);
-  wstTensor rho2 = kernel.apply(V);
-  wstTensor errorT = rho-rho2;
+  wstKernel2D<double> kernel = create_laplacian_5p_2d(hx, hy);
+  wstTensorT<double> rho2 = kernel.apply(V);
+  wstTensorT<double> errorT = rho-rho2;
   double error = (rho-rho2).norm2()*L/NPTS;
   return (error < 1.e-6);
 }
@@ -83,14 +82,14 @@ bool test_3_pts_lap_2d()
   double hx = std::abs(x[1]-x[0]);
   double hy = std::abs(y[1]-y[0]);
 
-  wstTensor V;
+  wstTensorT<double> V;
   V.create(std::bind(v2, L, std::placeholders::_1, std::placeholders::_2), x, y, NPTS, NPTS, true, true);
-  wstTensor rho;
+  wstTensorT<double> rho;
   rho.create(std::bind(v2r, L, std::placeholders::_1, std::placeholders::_2), x, y, NPTS, NPTS, true, true);
 
-  wstKernel2D kernel = create_laplacian_3p_2d(hx, hy);
-  wstTensor rho2 = kernel.apply(V);
-  wstTensor errorT = rho-rho2;
+  wstKernel2D<double> kernel = create_laplacian_3p_2d(hx, hy);
+  wstTensorT<double> rho2 = kernel.apply(V);
+  wstTensorT<double> errorT = rho-rho2;
   double error = (rho-rho2).norm2()*L/NPTS;
   return (error < 1.e-2);
 }
