@@ -3,6 +3,7 @@
 
 #include <vector>
 #include "wstTensor.h"
+#include "wstMatrix.h"
 #include "wstUtils.h"
 
 using std::vector;
@@ -677,5 +678,17 @@ wstKernel3D<double> create_laplacian_7p_3d(double hx, double hy, double hz, doub
 //    printf("Lanczos: lowest eigenvalue is %15.8f\n\n", e[0]);
 //  }
 //};
+
+
+template <typename Q>
+wstMatrixT<Q> matrix_inner(const std::vector< wstTensorT<Q> >& v1, const std::vector< wstTensorT<Q> >& v2) {
+  int sz = v1.size();
+  wstMatrixT<Q> r = zeros(sz, sz);
+  for (int i = 0; i < sz; i++) {
+    for (int j = 0; j < sz; j++) {
+      r(i,j) = inner(v1[i], v2[j]);
+    }
+  }
+}
 
 #endif

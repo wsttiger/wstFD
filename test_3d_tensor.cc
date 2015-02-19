@@ -52,6 +52,30 @@ bool test_7_pts_lap_3d()
   return (error < 1.e-8);
 }
 
+//bool test_7_pts_lap_3d_complex()
+//{
+//  const double L = 5.0;
+//  const int NPTS = 150;
+//
+//  vector<double> x = wstUtils::linspace(-L/2, L/2, NPTS);
+//  vector<double> y = wstUtils::linspace(-L/2, L/2, NPTS);
+//  vector<double> z = wstUtils::linspace(-L/2, L/2, NPTS);
+//  double hx = std::abs(x[1]-x[0]);
+//  double hy = std::abs(y[1]-y[0]);
+//  double hz = std::abs(y[1]-y[0]);
+//
+//  wstTensorT< std::complex<double> > V;
+//  V.create(std::bind(v2, L, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), x, y, z, NPTS, NPTS, NPTS, true, true, true);
+//  wstTensorT< std::complex<double> > rho;
+//  rho.create(std::bind(v2r, L, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), x, y, z, NPTS, NPTS, NPTS, true, true, true);
+//
+//  wstKernel3D< std::complex<double> > kernel = create_laplacian_7p_3d(hx, hy, hz);
+//  wstTensorT< std::complex<double> > rho2 = kernel.apply(V);
+//  wstTensorT< std::complex<double> > errorT = rho-rho2;
+//  double error = (rho-rho2).norm2()*L/NPTS;
+//  return (error < 1.e-8);
+//}
+
 bool test_5_pts_lap_3d()
 {
   const double L = 5.0;
