@@ -679,6 +679,13 @@ wstKernel3D<double> create_laplacian_7p_3d(double hx, double hy, double hz, doub
 //  }
 //};
 
+template <typename Q> std::vector<wstTensorT<Q> > apply(const wstKernel<Q>& kernel, std::vector<wstTensorT<Q> >& vf) {
+  std::vector<wstTensorT<Q> > rf(vf.size());
+  for (unsigned int i = 0; i < rf.size(); i++) {
+    rf[i] = kernel.apply(vf[i]);
+  }
+  return rf;
+}
 
 template <typename Q>
 wstMatrixT<Q> matrix_inner(const std::vector< wstTensorT<Q> >& v1, const std::vector< wstTensorT<Q> >& v2) {

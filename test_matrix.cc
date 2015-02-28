@@ -14,6 +14,11 @@
 #define MARRAYM12 = {7.0,-2.2,23.7,2.2,2.9,7.6}
 #define MARRAYMM12 = {-80.4,-105.9,-8.2,-8.9}
 #define MARRAYSQ = {1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0,11.0,12.0,13.0,14.0,15.0,16.0}
+#define MARRAYSQCOL1 = {1.0,5.0,9.0,13.0}
+#define MARRAYSQCOL2 = {2.0,6.0,10.0,14.0}
+#define MARRAYSQCOL3 = {2.0,3.0,6.0,7.0,10.0,11.0,14.0,15.0}
+#define MARRAY1SLICE1 = {1.0,2.0,4.0,5.0}
+#define MARRAY1SLICE2 = {0.0,1.0,3.0,4.0}
 
 bool test_matrix_create()
 {
@@ -85,6 +90,70 @@ bool test_matrix_math()
   return passed;
 }
 
+bool test_matrix_cols()
+{
+  bool passed = true;
+  {
+    std::vector<double> av MARRAYSQ;
+    wstMatrixT<double> A = from_vector(4,4,av);
+    std::vector<double> ac MARRAYSQCOL1;
+    wstMatrixT<double> Ac = from_vector(4,1,ac);
+    passed = passed && norm2(Ac - A.col(0)) < 1e-16;
+  }
+  {
+    std::vector<double> av MARRAYSQ;
+    wstMatrixT<double> A = from_vector(4,4,av);
+    std::vector<double> ac MARRAYSQCOL2;
+    wstMatrixT<double> Ac = from_vector(4,1,ac);
+    passed = passed && norm2(Ac - A.col(1)) < 1e-16;
+  }
+  {
+    std::vector<double> av MARRAYSQ;
+    wstMatrixT<double> A = from_vector(4,4,av);
+    std::vector<double> ac0 MARRAYSQCOL1;
+    wstMatrixT<double> Ac0 = from_vector(4,1,ac0);
+    std::vector<double> ac1 MARRAYSQCOL2;
+    wstMatrixT<double> Ac1 = from_vector(4,1,ac1);
+    std::vector<wstMatrixT<double> > Acols = A.cols(wstMatrixSlice(0,1));
+    passed = passed && norm2(Ac0 - Acols[0]) < 1e-16;
+    passed = passed && norm2(Ac1 - Acols[1]) < 1e-16;
+  }
+  return passed;
+}
+
+bool test_matrix_slice()
+{
+  bool passed = true;
+  {
+    std::vector<double> av MARRAY1;
+    wstMatrixT<double> A = from_vector(2,3,av);
+    std::vector<double> avs MARRAY1SLICE1;
+    wstMatrixT<double> As = from_vector(2,2,avs);
+    passed = passed && norm2(As - A(wstMatrixSlice(0,1,1,2))) < 1e-16;
+  }
+  {
+    std::vector<double> av MARRAY1;
+    wstMatrixT<double> A = from_vector(2,3,av);
+    std::vector<double> avs MARRAY1SLICE2;
+    wstMatrixT<double> As = from_vector(2,2,avs);
+    passed = passed && norm2(As - A(wstMatrixSlice(0,1,0,1))) < 1e-16;
+  }
+  return passed;
+}
+
+bool test_matrix_conv()
+{
+  bool passed = true;
+  {
+    std::vector<double> ar MARRAYSQ;
+    wstMatrixT<double> Ar = from_vector(4,4,ar);
+    std::vector<std::complex<double> > ac MARRAYSQ;
+    wstMatrixT<std::complex<double> > Ac = from_vector(4,4,ac);
+    passed = passed && norm2(Ac - (wstMatrixT<std::complex<double> >)(Ar)) < 1e-16;
+  }
+  return passed;
+}
+
 bool test_matrix_diag()
 {
   bool passed = true;
@@ -123,6 +192,13 @@ bool test_matrix_diag()
     passed = passed && (std::abs(eigs(1)) < 1e-12);
     passed = passed && (std::abs(eigs(2)) < 1e-12);
     passed = passed && (std::abs(eigs(3) - 37.358045092788259466942691) < 1e-12);
+
+    // WSTHORNTON
+    wstMatrixT<std::complex<double> > evecs = result.second;
+    print(A);
+    print(eigs);
+    print(evecs.col(0));
+    print(evecs.col(3));
   }
 
   return passed;
@@ -142,6 +218,21 @@ int main(int argc, char** argv)
     printf("test_matrix_math -- PASSED\n");
   else
     printf("test_matrix_math -- FAILED\n");
+  testResult = test_matrix_cols();
+  if (testResult)
+    printf("test_matrix_cols -- PASSED\n");
+  else
+    printf("test_matrix_cols -- FAILED\n");
+  testResult = test_matrix_conv();
+  if (testResult)
+    printf("test_matrix_conv -- PASSED\n");
+  else
+    printf("test_matrix_conv -- FAILED\n");
+  testResult = test_matrix_slice();
+  if (testResult)
+    printf("test_matrix_slice -- PASSED\n");
+  else
+    printf("test_matrix_slice -- FAILED\n");
   testResult = test_matrix_diag();
   if (testResult)
     printf("test_matrix_diag -- PASSED\n");

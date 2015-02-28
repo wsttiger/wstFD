@@ -391,6 +391,28 @@ wstTensorT<Q> constant_function(int d0, int d1, int d2, double val, bool periodi
   return r;
 }
 
+template <typename Q> outer(const std::vector<wstTensor<Q> >& v1, const std::vector<wstTensor<Q> >& v2) {
+  
+  // assume that the tensors are all the same dimensions
+  int nsize = v1[0].size();
+  // and the v1 and v2 have the same length
+  int nvecs = v1.size();
+  int nvecs2 = v2.size();
+  assert(nvecs == nvecs2);
+
+  wstMatrixT<Q> S = zeros(nsize,nsize);
+  for (int i = 0; i < nsize; i++) {
+    for (int j = 0; j < nsize; j++) {
+      Q val = T(0);
+      for (int ivec = 0; ivec < nvecs; ivec++) {
+        val += v1[ivec]*v2[ivec];
+      }
+    }
+    S(i,j) = val;
+  }
+  return S;
+}
+
 //// create a random 1-D function (obviously cannot be periodic)
 //wstTensorT random_function(int d0, bool periodic = false) {
 //  wstTensorT r;

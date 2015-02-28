@@ -14,6 +14,24 @@ extern "C" void zheev_(char *jobz, char *uplo, int *n, std::complex<double> *a,
            int *lda, double *w, std::complex<double> *work, int *lwork,
            double *rwork, int *info);
 
+struct wstMatrixSlice {
+  wstMatrixSlice(int i0, int i1, int j0, int j1) 
+   : i0(i0), i1(i1), j0(j0), j1(j1), ndim(2) {}
+  
+  wstMatrixSlice(int i0, int i1) 
+   : i0(i0), i1(i1), j0(0), j1(0), ndim(1) {}
+
+  int n0() const {
+    return i1-i0+1;
+  }
+
+  int n1() const {
+    return j1-j0+1;
+  }
+
+  int i0, i1, j0, j1, ndim;
+};
+
 template <typename T>
 class wstMatrixT {
 private:
@@ -104,6 +122,7 @@ public:
     return _dim1; 
   }
 
+  // set all elements to zero
   void empty() {
     int sz = this->size();
     for (int i = 0; i < sz; i++) {
@@ -111,6 +130,7 @@ public:
     }
   }
 
+  // set all elements to value
   void value(T val) {
     int sz = this->size();
     for (int i = 0; i < sz; i++) {
@@ -133,26 +153,42 @@ public:
 //      printf("%15.8e\n", _p[i]);
 //  }
 
+  // pointer at a base position
   T* ptr() {
     return _p;
   }
 
+  // pointer at a base position
   const T* ptr() const {
     return _p;
   }
 
+  // pointer at a given (i,j) index
+  T* ptr(int i0, int i1) {
+    return &_p[i0*_dim1+i1];
+  }
+
+  // pointer at a given (i,j) index
+  const T* ptr(int i0, int i1) const {
+    return &_p[i0*_dim1+i0];
+  }
+
+  // index operator
   T& operator()(int i) {
     return _p[i];
   }
 
+  // index operator
   T& operator()(int i) const {
     return _p[i];
   }
 
+  // index operator
   T& operator()(int i0, int i1) {
     return _p[i0*_dim1+i1];
   }
 
+  // index operator
   T& operator()(int i0, int i1) const {
     return _p[i0*_dim1+i1];
   }
@@ -175,19 +211,23 @@ public:
     return r;
   }
 
+  // addition
   wstMatrixT operator+(const wstMatrixT& t) const {
     return gaxpy_oop(1.0, t, 1.0);
   }
 
+  // subtraction
   wstMatrixT operator-(const wstMatrixT& t) const {
     return gaxpy_oop(1.0, t, -1.0);
   }
- 
+
+  // inplace scaling by a constant 
   void scale(T a) {
     int sz = this->size();
     for (int i = 0; i < sz; i++) _p[i] *= a;
   }
- 
+
+  // inner like a vector 
   T inner(const wstMatrixT& t) const {
     int sz1 = this->size();
     int sz2 = t.size();
@@ -197,6 +237,7 @@ public:
     return rval;
   }
 
+  // two norm of the vector
   T norm2() const {
     int sz = this->size();
     T rval = 0.0;
@@ -204,11 +245,57 @@ public:
     return std::sqrt(rval);
   }
 
+  // normalize the values according to the two-norm of the vector
   void normalize() {
     T s = this->norm2();
     this->scale(1./s); 
   }
+
+  // simple slicing
+  wstMatrixT<T> operator()(const wstMatrixSlice& sl) {
+    wstMatrixT<T> R;
+    R.create(sl.n0(),sl.n1());
+    T* p = ptr(sl.i0, sl.j0);
+    for (int i = 0; i < sl.n0(); i++) {
+      for (int j = 0; j < sl.n1(); j++) {
+        R._p[i*R._dim1+j] = p[i*_dim1+j];
+      }
+    }
+    return R;
+  }
+
+  // conversion from complex to real
+  operator wstMatrixT<std::complex<T> > () const {
+    wstMatrixT<std::complex<T> > Ac;
+    Ac.create(nrows(), ncols());
+    int sz = size();
+    for (int i = 0; i < sz; i++) Ac(i) = std::complex<T>(_p[i],T(0));
+    return Ac;
+  }
+
+  // extract a column vector from matrix
+  wstMatrixT<T> col(int j) {
+    wstMatrixT<T> R;
+    int nr = nrows();
+    R.create(nr,1);
+    for (int i = 0; i < nr; i++) {
+      R(i) = _p[i*_dim0+j];
+    }
+    return R;
+  }
+
+  // extract a contiguous group of column vectors from matrix
+  std::vector<wstMatrixT<T> > cols(const wstMatrixSlice& sl) {
+    assert(sl.ndim == 1);
+    int nc = sl.n0();
+    std::vector<wstMatrixT<T> > R(nc);
+    for (int j = 0; j < nc; j++) {
+      R[j] = col(j);
+    }
+    return R;
+  }
 };
+
 
 template <typename Q>
 wstMatrixT<Q> gaxpy(const Q& a, const wstMatrixT<Q>& T1, const Q& b, const wstMatrixT<Q>& T2) {
@@ -220,9 +307,12 @@ double inner(const wstMatrixT<Q>& t1, const wstMatrixT<Q>& t2) {
   return t1.inner(t2);
 }
 
-template <typename Q>
-double norm2(const wstMatrixT<Q>& t) {
+double norm2(const wstMatrixT<double>& t) {
   return t.norm2();
+}
+
+double norm2(const wstMatrixT<std::complex<double> >& t) {
+  return std::abs(t.norm2());
 }
 
 void print(const wstMatrixT<double>& A) {
@@ -230,8 +320,8 @@ void print(const wstMatrixT<double>& A) {
   int nc = A.ncols();
   for (int i = 0; i < nr; i++) {
     for (int j = 0; j < nc; j++) {
-      //printf("%15.8e  ", A(i,j));
-      printf("%20.25e  ", A(i,j));
+      printf("%15.8e  ", A(i,j));
+      //printf("%20.25e  ", A(i,j));
     }
     printf("\n");
   }
@@ -296,6 +386,33 @@ wstMatrixT<Q> from_vector(int d0, int d1, const std::vector<Q>& v) {
     for (int j = 0; j < d1; j++)
       r(i,j) = v[i*d1+j];
   return r;
+}
+
+template <typename Q> 
+wstMatrixT<Q> real(const wstMatrixT<std::complex<Q> > Ac) {
+  wstMatrixT<Q> Ar;
+  Ar.create(Ac.nrows(), Ac.ncols()); 
+  int sz = Ar.size();
+  for (int i = 0; i < sz; i++) Ar(i) = std::real(Ac(i));
+  return Ar;
+}
+
+template <typename Q> 
+wstMatrixT<Q> imag(const wstMatrixT<std::complex<Q> > Ac) {
+  wstMatrixT<Q> Ar;
+  Ar.create(Ac.nrows(), Ac.ncols()); 
+  int sz = Ar.size();
+  for (int i = 0; i < sz; i++) Ar(i) = std::imag(Ac(i));
+  return Ar;
+}
+
+template <typename Q> 
+wstMatrixT<Q> abs(const wstMatrixT<std::complex<Q> > Ac) {
+  wstMatrixT<Q> Ar;
+  Ar.create(Ac.nrows(), Ac.ncols()); 
+  int sz = Ar.size();
+  for (int i = 0; i < sz; i++) Ar(i) = std::abs(Ac(i));
+  return Ar;
 }
 
 template <typename Q>
@@ -366,7 +483,7 @@ std::pair< wstMatrixT<double>, wstMatrixT<double> > diag(const wstMatrixT<double
   }
   delete work;
 
-  return std::pair< wstMatrixT<double>, wstMatrixT<double> >(e, ev);
+  return std::pair< wstMatrixT<double>, wstMatrixT<double> >(transpose(e), transpose(ev));
 }
 
 // For a hermitian complex matrix
@@ -395,7 +512,7 @@ std::pair< wstMatrixT<double>, wstMatrixT<std::complex<double> > > diag(const ws
   delete work;
   delete rwork;
 
-  return std::pair< wstMatrixT<double>, wstMatrixT<std::complex<double> > >(e, ev);
+  return std::pair< wstMatrixT<double>, wstMatrixT<std::complex<double> > >(transpose(e), transpose(ev));
 }
 
 #endif
