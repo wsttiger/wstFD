@@ -1,11 +1,14 @@
 #ifndef WSTUTILS_H_
 #define WSTUTILS_H_
 
+#include <cmath>
 #include <vector>
 
 extern "C" void dsyev_(char *jobz, char *uplo, int *n, double *a,
            int *lda, double *w, double *work, int *lwork,
            int *info);
+
+using std::vector;
 
 class wstUtils {
 public:
@@ -66,7 +69,7 @@ public:
     for (unsigned int iv = 0; iv < v.size(); iv++) {
       rnorm += v[iv]*v[iv];
     }
-    return sqrt(rnorm);
+    return std::sqrt(rnorm);
   }
   
   static vector<double> matrix_vector_mult(vector<double> mat, vector<double> v) {
@@ -87,7 +90,7 @@ public:
     for (unsigned int iv = 0; iv < v.size(); iv++) {
       rnorm += v[iv]*v[iv];
     }
-    rnorm = sqrt(rnorm);
+    rnorm = std::sqrt(rnorm);
     for (unsigned int iv = 0; iv < v.size(); iv++) {
       v[iv] /= rnorm;
     }
@@ -170,7 +173,7 @@ public:
 
   static bool is_equals(const vector<double>& a, const vector<double>& b, double tol = 1e-10) {
     for (unsigned int i = 0; i < a.size(); i++) {
-      if (fabs(a[i]-b[i]) > tol) return false;
+      if (std::abs(a[i]-b[i]) > tol) return false;
     }
     return true;
   }

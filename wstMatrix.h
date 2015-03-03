@@ -5,10 +5,14 @@
 #include <cassert>
 #include <memory>
 #include <complex>
-#include "wstUtils.h"
+//#include "wstUtils.h"
 
 using std::vector;
 using std::pair;
+
+extern "C" void dsyev_(char *jobz, char *uplo, int *n, double *a,
+           int *lda, double *w, double *work, int *lwork,
+           int *info);
 
 extern "C" void zheev_(char *jobz, char *uplo, int *n, std::complex<double> *a,
            int *lda, double *w, std::complex<double> *work, int *lwork,

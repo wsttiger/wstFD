@@ -6,6 +6,8 @@
 #include <memory>
 #include "wstUtils.h"
 
+#include "wstMatrix.h"
+
 using std::vector;
 using std::pair;
 
@@ -88,6 +90,22 @@ private:
     return r;
   }
 
+  friend wstTensorT copy_and_fill(const wstTensorT& t, wstMatrixT<T> A ) {
+    assert(t.size() == A.size());
+    wstTensorT r;
+    if (t._allocated) {
+      r._ndim = t._ndim; 
+      r._dims = t._dims;
+      r._bc = t._bc;
+      int sz = r.size();
+      r._p = new double[sz];
+      r._sp = std::shared_ptr<double>(r._p, [](double *p) {delete[] p;});
+      for (int i = 0; i < sz; i++) r._p[i] = A(i);
+      r._allocated = t._allocated;
+    }
+    return r;
+  }
+
 public:
   wstTensorT() 
     : _ndim(0), _dims(std::vector<int>(0)), _bc(std::vector<bool>(false)), _p(0),_allocated(false) {}
@@ -130,6 +148,12 @@ public:
     for (int i = 0; i < d0; i++) _p[i] = f(x[i]);
   }
 
+  void create(const wstMatrixT<T>& A, int d0, bool periodic = false) {
+    assert(A.size() == d0);
+    create(d0, periodic);
+    for (int i = 0; i < d0; i++) _p[i] = A(i);
+  }
+
   void create(int d0, int d1, bool periodic0 = false, bool periodic1 = false) {
     // dims
     _ndim = 2;
@@ -150,6 +174,12 @@ public:
     for (int i = 0; i < d0; i++)
       for (int j = 0; j < d1; j++)
         _p[i*d1+j] = f(x[i], y[j]);
+  }
+
+  void create(const wstMatrixT<T>& A, int d0, int d1, bool periodic0 = false, bool periodic1 = false) {
+    assert(A.size() == d0*d1);
+    create(d0, d1, periodic0, periodic1);
+    for (int i = 0; i < d0; i++) _p[i] = A(i);
   }
 
   void create(int d0, int d1, int d2, bool periodic0 = false, bool periodic1 = false, bool periodic2 = false) {
@@ -175,6 +205,12 @@ public:
       for (int j = 0; j < d1; j++)
         for (int k = 0; k < d2; k++)
           _p[i*d1*d2+j*d2+k] = f(x[i], y[j], z[k]);
+  }
+
+  void create(const wstMatrixT<T>& A, int d0, int d1, int d2, bool periodic0 = false, bool periodic1 = false, bool periodic2 = false) {
+    assert(A.size() == d0*d1*d2);
+    create(d0, d1, d2, periodic0, periodic1, periodic2);
+    for (int i = 0; i < d0; i++) _p[i] = A(i);
   }
 
   int size() const {
@@ -225,6 +261,16 @@ public:
 
   const T* ptr() const {
     return _p;
+  }
+
+  T& operator[](int i0) {
+    //assert(i0 >= 0 && i0 < _nsize);
+    return _p[i0];
+  }
+
+  const T& operator[](int i0) const {
+    //assert(i0 >= 0 && i0 < _nsize);
+    return _p[i0];
   }
 
   T& operator()(int i0) {
@@ -391,8 +437,9 @@ wstTensorT<Q> constant_function(int d0, int d1, int d2, double val, bool periodi
   return r;
 }
 
-template <typename Q> outer(const std::vector<wstTensor<Q> >& v1, const std::vector<wstTensor<Q> >& v2) {
-  
+template <typename Q> 
+wstMatrixT<Q> outer(const std::vector<wstTensorT<Q> >& v1, const std::vector<wstTensorT<Q> >& v2) {
+ 
   // assume that the tensors are all the same dimensions
   int nsize = v1[0].size();
   // and the v1 and v2 have the same length
@@ -400,18 +447,29 @@ template <typename Q> outer(const std::vector<wstTensor<Q> >& v1, const std::vec
   int nvecs2 = v2.size();
   assert(nvecs == nvecs2);
 
-  wstMatrixT<Q> S = zeros(nsize,nsize);
+  wstMatrixT<Q> S = zeros<Q>(nsize,nsize);
   for (int i = 0; i < nsize; i++) {
     for (int j = 0; j < nsize; j++) {
-      Q val = T(0);
+      Q val = Q(0);
       for (int ivec = 0; ivec < nvecs; ivec++) {
-        val += v1[ivec]*v2[ivec];
+        wstTensorT<Q> v1t = v1[ivec];
+        wstTensorT<Q> v2t = v2[ivec];
+        val += v1t[i]*v2t[j];
       }
+      S(i,j) = val;
     }
-    S(i,j) = val;
   }
   return S;
 }
+
+//  void fillrandom() {
+//    int sz = this->size();
+//    for (int i = 0; i < sz; i++) {
+//      int i1 = rand();
+//      double t1 = (i1 % 100000000)/100000000.0;
+//      _p[i] = t1;
+//    }
+//  }
 
 //// create a random 1-D function (obviously cannot be periodic)
 //wstTensorT random_function(int d0, bool periodic = false) {
@@ -421,6 +479,7 @@ template <typename Q> outer(const std::vector<wstTensor<Q> >& v1, const std::vec
 //  return r;
 //}
 //
+
 //// create a random 2-D function (obviously cannot be periodic)
 //wstTensorT random_function(int d0, int d1, bool periodic0 = false, bool periodic1 = false) {
 //  wstTensorT r;
@@ -429,12 +488,19 @@ template <typename Q> outer(const std::vector<wstTensor<Q> >& v1, const std::vec
 //  return r;
 //}
 //
-//// create a random 3-D function (obviously cannot be periodic)
-//wstTensorT random_function(int d0, int d1, int d2, bool periodic0 = false, bool periodic1 = false, bool periodic2 = false) {
-//  wstTensorT r;
-//  r.create(d0, d1, d2, periodic0, periodic1, periodic2);
-//  r.fillrandom();  
-//  return r;
-//}
+
+// create a random 3-D function (obviously cannot be periodic)
+wstTensorT<double> random_function_double(int d0, int d1, int d2, bool periodic0 = false, bool periodic1 = false, bool periodic2 = false) {
+  wstTensorT<double> r;
+  r.create(d0, d1, d2, periodic0, periodic1, periodic2);
+  int sz = d0*d1*d2;
+  double* p = r.ptr();
+  for (int i = 0; i < sz; i++) {
+    int i1 = rand();
+    double t1 = (i1 % 100000000)/100000000.0;
+    p[i] = t1;
+  }
+  return r;
+}
 
 #endif
