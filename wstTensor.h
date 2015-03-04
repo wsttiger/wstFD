@@ -503,4 +503,14 @@ wstTensorT<double> random_function_double(int d0, int d1, int d2, bool periodic0
   return r;
 }
 
+wstMatrixT<double> matrix_inner(const std::vector<wstTensorT<double> >& v1, const std::vector<wstTensorT<double> >& v2) {
+  int nsize = v1.size();
+  wstMatrixT<double> R = zeros<double>(nsize, nsize);
+  for (int i = 0; i < nsize; i++) {
+    for (int j = 0; j < nsize; j++) {
+      R(i,j) = inner(v1[i], v2[j]);
+    }
+  }
+  return R;
+}
 #endif

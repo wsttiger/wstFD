@@ -12,6 +12,17 @@ template <typename T>
 class wstKernel {
   public:
   virtual wstTensorT<T> apply(const wstTensorT<T>& t) const = 0;
+
+  wstMatrixT<T> sandwich(const std::vector<wstTensorT<T> >& orbs) {
+    int norbs = orbs.size();
+    std::vector<wstTensorT<T> > Korbs(norbs);
+    for (int i = 0; i < norbs; i++) {
+      Korbs[i] = this->apply(orbs[i]);
+    }
+    wstMatrixT<T> R = matrix_inner(orbs, Korbs);
+    return R; 
+  }
+
 };
 
 template <typename T>

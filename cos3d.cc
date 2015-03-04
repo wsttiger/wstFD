@@ -105,10 +105,16 @@ void test_3d() {
   double hx = std::abs(x[1]-x[0]);
   double hy = std::abs(y[1]-y[0]);
   double hz = std::abs(y[1]-y[0]);
-
+  wstKernel3D<double> Hker = build_hamiltonian(x, y, z, hx, hy, hz, NPTS);
+  std::vector<wstTensorT<double> > orbs = make_random_guess(NPTS, NPTS, NPTS, 20);
+  wstMatrixT<double> H = Hker.sandwich(orbs);
+  H = 0.5*(H + transpose(H));
+  std::pair<wstMatrixT<double>, wstMatrixT<double> > result = diag(H);
+  print(result.first);
 }
 
 int main(int argc, char** argv) {
-  test_orbital_cache();
+  test_3d();
+  //test_orbital_cache();
   return 0;
 }
