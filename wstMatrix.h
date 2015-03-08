@@ -300,7 +300,6 @@ public:
   }
 };
 
-
 template <typename Q>
 wstMatrixT<Q> gaxpy(const Q& a, const wstMatrixT<Q>& T1, const Q& b, const wstMatrixT<Q>& T2) {
   return T1.gaxpy_oop(a, T2, b);

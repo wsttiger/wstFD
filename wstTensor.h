@@ -513,4 +513,61 @@ wstMatrixT<double> matrix_inner(const std::vector<wstTensorT<double> >& v1, cons
   }
   return R;
 }
+
+template <typename Q>
+void normalize(std::vector<wstTensorT<Q> >& vs) {
+  int nsize = vs.size();
+  for (int i = 0; i < nsize; i++) {
+    wstTensorT<Q> f = vs[i];
+    f.normalize(); 
+  }
+}
+
+template <typename Q>
+std::vector<wstTensorT<Q> > transform(const std::vector<wstTensorT<Q> >& orbs, const std::vector<wstMatrixT<Q> >& vs) {
+  int nvecs= vs.size();
+  int norbs = orbs.size();
+  std::vector<wstTensorT<Q> > orbs2;
+  for (int i = 0; i < nvecs; i++) {
+    wstMatrixT<Q> v = vs[i];
+    int nsize = vs.size();
+    assert(v.nrows() == 1 || v.ncols() == 1);
+    wstTensorT<Q> f = copy(orbs[0], true);
+    for (int j = 0; j < nsize; j++) {
+      f.gaxpy(1.0, orbs[j], v(j));
+    }
+    orbs2.push_back(f);
+  }
+  return orbs2;
+}
+
+// 00 <--> 11
+// 01 <--> 10
+
+// 000 <--> 111
+// 001 <--> 110
+// 010 <--> 101 
+// 100 <--> 011
+template <typename Q>
+void fftshift(wstTensorT<Q>& t) {
+  for (int i = 0; i < m2; i++) {
+    for (int j = 0; j < n2; j++) {
+      for (int k = 0; k < p2; k++) {
+        Q t07               = t(i,j,k);
+        t(i,j,k)            = t(i+m2,j+n2,k+p2);
+        t(i+m2,j+n2,k+p2)   = t07;
+        Q t16               = t(i,j,k+p2);
+        t(i,j,k+p2)         = t(i+m2,j+n2,k);
+        t(i+m2,j+n2,k)      = t16;
+        Q t25               = t(i,j+n2,k);
+        t(i,j+n2,k)         = t(i+m2,j,k+p2);
+        t(i+m2,j,k+p2)      = t25;
+        Q t43               = t(i+m2,j,k);
+        t(i+m2,j,k)         = t(i,j+n2,k+p2);
+        t(i,j+n2,k+p2)      = t43;
+      }
+    }
+  }
+}
+
 #endif

@@ -13,6 +13,71 @@ double V(double x, double y, double z) {
   return -alpha*(std::cos(2.0*PI*x/L)*cos(2.0*PI*y/L)*cos(2.0*PI*z/L)+1.0);
 }
 
+template <typename Q>
+class OrbitalCache {
+private:
+  int _maxorbs;
+  double _thresh;
+  std::vector<wstTensorT<Q> > _orbs;
+
+public:
+  OrbitalCache(int maxorbs = 10, double thresh = 1e-10)
+   : _maxorbs(maxorbs), _thresh(thresh) {}
+
+//  std::vector<wstTensorT<Q> > append(const std::vector<wstTensorT<Q> >& orbs) {
+//    unsigned int szorbs = orbs.size();
+//    unsigned int szorbs2 = _orbs.size();
+//    std::vector<wstTensorT<Q> > combined_orbs;
+//    combined_orbs.insert(combined_orbs.begin(), orbs.begin(), orbs.end());
+//    combined_orbs.insert(combined_orbs.end(), _orbs.begin(), _orbs.end());
+//
+//    printf("OrbitalCache::append --> performing outer product ...\n");
+//    wstMatrixT<Q> S = outer(combined_orbs, combined_orbs);
+//    printf("OrbitalCache::append --> diagonalizing matrix ...\n");
+//    std::pair<wstMatrixT<Q>, wstMatrixT<Q> > result = diag(S);
+//    printf("OrbitalCache::append --> done  diagonalizing matrix ...\n");
+//    wstMatrixT<Q> eigs = result.first;
+//    wstMatrixT<Q> evecs = result.second;
+//
+//    int norbs = 0;
+//    for (int i = 0; i < S.nrows(); i++) {
+//      if (std::abs(eigs(i)) > _thresh) norbs++;
+//    }
+//
+//    std::vector<wstTensorT<Q> > R(norbs);
+//    for (int i = 0, j = 0; i < norbs; j++) {
+//      if (std::abs(eigs(j)) > _thresh) {
+//        R[i++] = copy_and_fill(orbs[0],evecs.col(j));
+//      }
+//    }
+//    return R; 
+//  }
+
+  std::vector<wstTensorT<Q> > append(const std::vector<wstTensorT<Q> >& orbs) {
+    unsigned int szorbs = orbs.size();
+    unsigned int szorbs2 = _orbs.size();
+    std::vector<wstTensorT<Q> > combined_orbs;
+    combined_orbs.insert(combined_orbs.begin(), orbs.begin(), orbs.end());
+    combined_orbs.insert(combined_orbs.end(), _orbs.begin(), _orbs.end());
+
+    wstMatrixT<Q> S = matrix_inner(combined_orbs, combined_orbs);
+    S = 0.5*(S + ctranspose(S));
+    std::pair<wstMatrixT<Q>, wstMatrixT<Q> > result = diag(S);
+    wstMatrixT<Q> eigs = result.first;
+    wstMatrixT<Q> evecs = result.second;
+
+    int indx = -1;
+    for (int i = 0; i < S.nrows() && indx < 0; i++) {
+      if (std::abs(eigs(i)) > _thresh) {
+        indx = i; 
+      }
+    }
+    std::vector<wstTensorT<Q> > rorbs = transform<Q>(orbs,evecs.cols(wstMatrixSlice(indx,S.ncols()-1)));
+    normalize(rorbs);
+    return rorbs;
+  }
+};
+
 wstKernel3D<double> build_hamiltonian(const std::vector<double>& x, 
                                       const std::vector<double>& y, 
                                       const std::vector<double>& z, 
@@ -30,48 +95,11 @@ std::vector<wstTensorT<double> > make_random_guess(int npts0, int npts1, int npt
     wstTensorT<double> f = random_function_double(npts0, npts1, npts2, true, true, true);
     orbs.push_back(f);
   }
+  OrbitalCache<double> orbcache(norbs);
+  orbs = orbcache.append(orbs);
+
   return orbs;
 }
-
-template <typename Q>
-class OrbitalCache {
-private:
-  int _maxorbs;
-  double _thresh;
-  std::vector<wstTensorT<Q> > _orbs;
-
-public:
-  OrbitalCache(int maxorbs = 10, double thresh = 1e-10)
-   : _maxorbs(maxorbs), _thresh(thresh) {}
-
-  std::vector<wstTensorT<Q> > append(const std::vector<wstTensorT<Q> >& orbs) {
-    unsigned int szorbs = orbs.size();
-    unsigned int szorbs2 = _orbs.size();
-    std::vector<wstTensorT<Q> > combined_orbs;
-    combined_orbs.insert(combined_orbs.begin(), orbs.begin(), orbs.end());
-    combined_orbs.insert(combined_orbs.end(), _orbs.begin(), _orbs.end());
-
-    wstMatrixT<Q> S = outer(combined_orbs, combined_orbs);
-    std::pair<wstMatrixT<Q>, wstMatrixT<Q> > result = diag(S);
-
-    wstMatrixT<Q> eigs = result.first;
-    wstMatrixT<Q> evecs = result.second;
-
-    int norbs = 0;
-    for (int i = 0; i < S.nrows(); i++) {
-      if (std::abs(eigs(i)) > _thresh) norbs++;
-    }
-
-    std::vector<wstTensorT<Q> > R(norbs);
-    for (int i = 0, j = 0; i < norbs; j++) {
-      if (std::abs(eigs(j)) > _thresh) {
-        R[i++] = copy_and_fill(orbs[0],evecs.col(j));
-      }
-    }
-    return R; 
-  }
-
-};
 
 void test_orbital_cache() {
   std::vector<wstTensorT<double> > orbs;
@@ -84,12 +112,19 @@ void test_orbital_cache() {
   wstTensorT<double> orb4 = empty_function<double>(4, false);
   orb4(0) = 1.0; orb4(1) = 1.0; orb4(2) = 1.0; orb4(3) = 1.0; 
 
+  print(orb1);
+  print(orb2);
+  print(orb3);
+
   orbs.push_back(orb1); 
   orbs.push_back(orb2); 
   orbs.push_back(orb3); 
 
   OrbitalCache<double> orbcache(5);
   orbs = orbcache.append(orbs);
+
+  print(orbs[0]);
+  print(orbs[1]);
 
   orbs.push_back(orb4); 
   orbs = orbcache.append(orbs);
@@ -99,16 +134,24 @@ void test_orbital_cache() {
 }
 
 void test_3d() {
+  printf("building vectors ...\n");
   vector<double> x = wstUtils::linspace(-L/2, L/2, NPTS);
   vector<double> y = wstUtils::linspace(-L/2, L/2, NPTS);
   vector<double> z = wstUtils::linspace(-L/2, L/2, NPTS);
+  printf("spacing ...\n");
   double hx = std::abs(x[1]-x[0]);
   double hy = std::abs(y[1]-y[0]);
   double hz = std::abs(y[1]-y[0]);
+  printf("building hamiltonian kernel ...\n");
   wstKernel3D<double> Hker = build_hamiltonian(x, y, z, hx, hy, hz, NPTS);
-  std::vector<wstTensorT<double> > orbs = make_random_guess(NPTS, NPTS, NPTS, 20);
+  printf("random guess orbitals ...\n");
+  std::vector<wstTensorT<double> > orbs = make_random_guess(NPTS, NPTS, NPTS, 1000);
+  printf("making overlap ...\n");
+  wstMatrixT<double> S = matrix_inner(orbs, orbs);
+  printf("making hamiltonian matrix ...\n");
   wstMatrixT<double> H = Hker.sandwich(orbs);
   H = 0.5*(H + transpose(H));
+  printf("diagonalizing hamiltonian matrix ...\n");
   std::pair<wstMatrixT<double>, wstMatrixT<double> > result = diag(H);
   print(result.first);
 }
