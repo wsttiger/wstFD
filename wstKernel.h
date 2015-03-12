@@ -690,60 +690,41 @@ wstKernel3D<double> create_laplacian_7p_3d(double hx, double hy, double hz, doub
 //  }
 //};
 
-template <typename T>
-class wstBSHKernel3D : public wstKernel<T> {
-
-private:
-  double _mu;
-  double _hx;
-  double _hy;
-  double _hz;
-
-public:
-  wstBSHKernel3D(double mu, double hx, double hy, double hz)
-   : _mu(mu), _hx(hx), _hy(hy), _hz(hz) {};
-
-  virtual wstTensorT<T> apply(const wstTensorT<T>& t) const {
-    wstTensorT<Q> R = copy(t, true);
-    int d0 = t.dim(0);
-    int d1 = t.dim(1);
-    int d2 = t.dim(2);
-    for (int i = 0; i < d0; i++) {
-      for (int j = 0; j < d1; j++) {
-        for (int k = 0; k < d2; k++) {
-          T val = 0.0;
-          for (int i2 = 0; i2 < d0; i2++) {
-            for (int j2 = 0; j2 < d1; j2++) {
-              for (int k2 = 0; k2 < d2; k2++) {
-              }
-            }
-          }
-        }
-      }
-    }
-    R(i,j,k) = val;
-  }
-  return R;
-};
-
-  virtual wstTensorT<T> apply(const wstTensorT<T>& t) const {
-    wstTensorT<T> r = copy(t,true);
-    int d0 = t.dim(0); int d1 = t.dim(1); 
-    int stsz = _stencil.size();
-    // loop over points
-    for (int i = 0; i < d0; i++) {
-      for (int j = 0; j < d1; j++) {
-        T val = (_local) ? _localf(i,j)*t(i,j) : 0.0;
-        for (int ist = 0; ist < stsz; ist++) {
-          wstStencil2D st = _stencil[ist];
-          val += st.c*t(i+st.x, j+st.y);
-        }
-        r(i,j) = val;
-      }
-    }
-    return r;
-  }
-
+//template <typename T>
+//class wstBSHKernel3D : public wstKernel<T> {
+//
+//private:
+//  double _mu;
+//  double _hx;
+//  double _hy;
+//  double _hz;
+//
+//public:
+//  wstBSHKernel3D(double mu, double hx, double hy, double hz)
+//   : _mu(mu), _hx(hx), _hy(hy), _hz(hz) {};
+//
+//  virtual wstTensorT<T> apply(const wstTensorT<T>& t) const {
+//    wstTensorT<Q> R = copy(t, true);
+//    int d0 = t.dim(0);
+//    int d1 = t.dim(1);
+//    int d2 = t.dim(2);
+//    for (int i = 0; i < d0; i++) {
+//      for (int j = 0; j < d1; j++) {
+//        for (int k = 0; k < d2; k++) {
+//          T val = 0.0;
+//          for (int i2 = 0; i2 < d0; i2++) {
+//            for (int j2 = 0; j2 < d1; j2++) {
+//              for (int k2 = 0; k2 < d2; k2++) {
+//              }
+//            }
+//          }
+//        }
+//      }
+//    }
+//    R(i,j,k) = val;
+//  }
+//  return R;
+//};
 
 template <typename Q> std::vector<wstTensorT<Q> > apply(const wstKernel<Q>& kernel, std::vector<wstTensorT<Q> >& vf) {
   std::vector<wstTensorT<Q> > rf(vf.size());

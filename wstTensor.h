@@ -1,6 +1,7 @@
 #ifndef WSTTENSOR_H_
 #define WSTTENSOR_H_
 
+#include <fftw3.h>
 #include <vector>
 #include <cassert>
 #include <memory>
@@ -36,6 +37,31 @@ private:
       printf("%15.10f   \n", t1._p[i]);
   }
  
+  friend void print2d(const wstTensorT<double>& t1) {
+    assert(t1._ndim == 2);
+    printf("Dims (%d, %d)\n", t1.dim(0), t1.dim(1));
+    for (unsigned int i = 0; i < t1.dim(0); i++) {
+      for (unsigned int j = 0; j < t1.dim(1); j++) {
+        printf("%15.10f  ", t1(i,j));
+      }
+      printf("\n");
+    }
+  }
+
+  friend void print3d(const wstTensorT<double>& t1) {
+    assert(t1._ndim == 3);
+    printf("Dims (%d, %d, %d)\n", t1.dim(0), t1.dim(1), t1.dim(2));
+    for (unsigned int i = 0; i < t1.dim(0); i++) {
+      printf("(%d,:,:)\n",i);
+      for (unsigned int j = 0; j < t1.dim(1); j++) {
+        for (unsigned int k = 0; k < t1.dim(2); k++) {
+          printf("%15.10f  ", t1(i,j,k));
+        }
+        printf("\n");
+      }
+      printf("\n");
+    }
+  }
   friend void print(const wstTensorT<double>& t1, const wstTensorT<double>& t2) {
     int sz1 = t1.size(); 
     printf("# dims:  %d\n", t1._ndim);
@@ -541,33 +567,94 @@ std::vector<wstTensorT<Q> > transform(const std::vector<wstTensorT<Q> >& orbs, c
   return orbs2;
 }
 
-// 00 <--> 11
-// 01 <--> 10
-
-// 000 <--> 111
-// 001 <--> 110
-// 010 <--> 101 
-// 100 <--> 011
 template <typename Q>
 void fftshift(wstTensorT<Q>& t) {
-  for (int i = 0; i < m2; i++) {
-    for (int j = 0; j < n2; j++) {
-      for (int k = 0; k < p2; k++) {
-        Q t07               = t(i,j,k);
-        t(i,j,k)            = t(i+m2,j+n2,k+p2);
-        t(i+m2,j+n2,k+p2)   = t07;
-        Q t16               = t(i,j,k+p2);
-        t(i,j,k+p2)         = t(i+m2,j+n2,k);
-        t(i+m2,j+n2,k)      = t16;
-        Q t25               = t(i,j+n2,k);
-        t(i,j+n2,k)         = t(i+m2,j,k+p2);
-        t(i+m2,j,k+p2)      = t25;
-        Q t43               = t(i+m2,j,k);
-        t(i+m2,j,k)         = t(i,j+n2,k+p2);
-        t(i,j+n2,k+p2)      = t43;
+  // Can only do even numbers right now
+  for (int d = 0; d < t.ndim(); d++)
+    assert(t.dim(d)%2 == 0);
+  // 0 <--> 1
+  if (t.ndim() == 1) {
+    int m2 = t.dim(0)/2;
+    for (int i = 0; i < m2; i++) {
+      Q t01   = t(i);
+      t(i)    = t(i+m2);
+      t(i+m2) = t01;
+    }
+  }
+  // 00 <--> 11
+  // 01 <--> 10
+  else if (t.ndim() == 2) {
+    int m2 = t.dim(0)/2;
+    int n2 = t.dim(1)/2;
+    for (int i = 0; i < m2; i++) {
+      for (int j = 0; j < n2; j++) {
+        Q t03          = t(i,j);
+        t(i,j)         = t(i+m2,j+n2);
+        t(i+m2,j+n2)   = t03;
+        Q t12          = t(i,j+n2);
+        t(i,j+n2)      = t(i+m2,j);
+        t(i+m2,j)      = t12;
+      }
+    }
+  }
+  // 000 <--> 111
+  // 001 <--> 110
+  // 010 <--> 101 
+  // 100 <--> 011
+  else if (t.ndim() == 3) {
+    int m2 = t.dim(0)/2;
+    int n2 = t.dim(1)/2;
+    int p2 = t.dim(2)/2;
+    for (int i = 0; i < m2; i++) {
+      for (int j = 0; j < n2; j++) {
+        for (int k = 0; k < p2; k++) {
+          Q t07               = t(i,j,k);
+          t(i,j,k)            = t(i+m2,j+n2,k+p2);
+          t(i+m2,j+n2,k+p2)   = t07;
+          Q t16               = t(i,j,k+p2);
+          t(i,j,k+p2)         = t(i+m2,j+n2,k);
+          t(i+m2,j+n2,k)      = t16;
+          Q t25               = t(i,j+n2,k);
+          t(i,j+n2,k)         = t(i+m2,j,k+p2);
+          t(i+m2,j,k+p2)      = t25;
+          Q t43               = t(i+m2,j,k);
+          t(i+m2,j,k)         = t(i,j+n2,k+p2);
+          t(i,j+n2,k+p2)      = t43;
+        }
       }
     }
   }
 }
+
+
+wstTensorT<std::complex<double> > fft(const wstTensorT<std::complex<double> >& t) {
+  wstTensorT<std::complex<double> > R = copy(t,true);
+  return R;
+}
+
+//wstTensorT<std::complex<double> > fft(const wstTensorT<std::complex<double> >& t) {
+//  wstTensorT<std::complex<double> > R = copy(t,true);
+//  std::complex<double>* in = t.ptr();
+//  std::complex<double>* out = R.ptr();
+//  fftw_plan plan;
+//  if (t.ndim() == 1) {
+//    plan = fftw_plan_dft_1d(N, reinterpret_cast<fftw_complex*>(in), 
+//        reinterpret_cast<fftw_complex*>(out), FFTW_FORWARD, FFTW_ESTIMATE);
+//  }
+//  else if (t.ndim() == 2) {
+//    plan = fftw_plan_dft_2d(N, reinterpret_cast<fftw_complex*>(in), 
+//        reinterpret_cast<fftw_complex*>(out), FFTW_FORWARD, FFTW_ESTIMATE);
+//  }
+//  else if (t.ndim() == 3) {
+//    plan = fftw_plan_dft_3d(N, reinterpret_cast<fftw_complex*>(in), 
+//        reinterpret_cast<fftw_complex*>(out), FFTW_FORWARD, FFTW_ESTIMATE);
+//  }
+//  else {
+//    assert(false);
+//  }
+//  fftw_execute(p); 
+//  fftw_destroy_plan(p);
+//  return R;
+//}
 
 #endif
