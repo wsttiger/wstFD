@@ -30,7 +30,7 @@ double v2r(double L, double x, double y, double z)
 
 inline
 double gaussian(double coeff, double expnt, double x, double y, double z) {
-  return coeff*std::exp(-expnt*(x*x + y*y + z*z));
+  return coeff*std::exp(expnt*(x*x + y*y + z*z));
 }
 
 bool test_7_pts_lap_3d()
@@ -195,22 +195,25 @@ bool test_fftshift()
   return passed;
 }
 
-//void test_3d_fft() {
-//  const double L = 5.0;
-//  const int NPTS = 10;
-//
-//  vector<double> x = wstUtils::linspace(-L/2, L/2, NPTS);
-//  vector<double> y = wstUtils::linspace(-L/2, L/2, NPTS);
-//  vector<double> z = wstUtils::linspace(-L/2, L/2, NPTS);
-//
-//  wstTensorT<double> G;
-//  G.create(std::bind(gaussian, 1.0, -0.5, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), x, y, z, NPTS, NPTS, NPTS);
-//  print3d(FG);
-//}
+void test_3d_fft() {
+  const double L = 5.0;
+  const int NPTS = 22;
+
+  vector<double> x = wstUtils::linspace(-L/2, L/2, NPTS);
+  vector<double> y = wstUtils::linspace(-L/2, L/2, NPTS);
+  vector<double> z = wstUtils::linspace(-L/2, L/2, NPTS);
+
+  wstTensorT<double> G;
+  G.create(std::bind(gaussian, 1.0, -0.5, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), x, y, z, NPTS, NPTS, NPTS);
+  wstTensorT<std::complex<double> > FG = fft(G);
+  fftshift(FG);
+  print(real(FG));
+  //print(G);
+}
 
 int main(int argc, char** argv)
 {
-//  test_3d_fft();
+  test_3d_fft();
   assert(false);
 
   bool testResult = false;

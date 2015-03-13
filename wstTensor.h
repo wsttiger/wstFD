@@ -27,71 +27,6 @@ private:
   // is the tensor currently allocated?
   bool _allocated;
 
-  friend void print(const wstTensorT<double>& t1) {
-    int sz1 = t1.size();
-    printf("# dims:  %d\n", t1._ndim);
-    for (unsigned int i = 0; i < t1._dims.size(); i++) {
-        printf("%d\n", t1._dims[i]); 
-    }
-    for (int i = 0; i < sz1; i++)
-      printf("%15.10f   \n", t1._p[i]);
-  }
- 
-  friend void print2d(const wstTensorT<double>& t1) {
-    assert(t1._ndim == 2);
-    printf("Dims (%d, %d)\n", t1.dim(0), t1.dim(1));
-    for (unsigned int i = 0; i < t1.dim(0); i++) {
-      for (unsigned int j = 0; j < t1.dim(1); j++) {
-        printf("%15.10f  ", t1(i,j));
-      }
-      printf("\n");
-    }
-  }
-
-  friend void print3d(const wstTensorT<double>& t1) {
-    assert(t1._ndim == 3);
-    printf("Dims (%d, %d, %d)\n", t1.dim(0), t1.dim(1), t1.dim(2));
-    for (unsigned int i = 0; i < t1.dim(0); i++) {
-      printf("(%d,:,:)\n",i);
-      for (unsigned int j = 0; j < t1.dim(1); j++) {
-        for (unsigned int k = 0; k < t1.dim(2); k++) {
-          printf("%15.10f  ", t1(i,j,k));
-        }
-        printf("\n");
-      }
-      printf("\n");
-    }
-  }
-  friend void print(const wstTensorT<double>& t1, const wstTensorT<double>& t2) {
-    int sz1 = t1.size(); 
-    printf("# dims:  %d\n", t1._ndim);
-    for (unsigned int i = 0; i < t1._dims.size(); i++) {
-        printf("%d     %d\n", t1._dims[i], t2._dims[i]); 
-    }
-    for (int i = 0; i < sz1; i++)
-      printf("%15.10f     %15.10f\n", t1._p[i], t2._p[i]);
-  }
- 
-  friend void print(const wstTensorT<double>& t1, const wstTensorT<double>& t2, const wstTensorT<double>& t3) {
-    int sz1 = t1.size(); 
-    printf("# dims:  %d\n", t1._ndim);
-    for (unsigned int i = 0; i < t1._dims.size(); i++) {
-        printf("%d     %d     %d\n", t1._dims[i], t2._dims[i], t3._dims[i]); 
-    }
-    for (int i = 0; i < sz1; i++)
-      printf("%15.10f     %15.10f     %15.10f\n", t1._p[i], t2._p[i], t3._p[i]);
-  }
- 
-  friend void print(const wstTensorT<double>& t1, const wstTensorT<double>& t2, const wstTensorT<double>& t3, const wstTensorT<double>& t4) {
-    int sz1 = t1.size(); 
-    printf("# dims:  %d\n", t1._ndim);
-    for (unsigned int i = 0; i < t1._dims.size(); i++) {
-        printf("%d     %d     %d     %d\n", t1._dims[i], t2._dims[i], t3._dims[i], t4._dims[i]); 
-    }
-    for (int i = 0; i < sz1; i++)
-      printf("%15.10f     %15.10f     %15.10f     %15.10f\n", t1._p[i], t2._p[i], t3._p[i], t4._p[i]);
-  }
-
   friend wstTensorT copy(const wstTensorT& t, bool empty = false) {
     wstTensorT r;
     if (t._allocated) {
@@ -99,8 +34,8 @@ private:
       r._dims = t._dims;
       r._bc = t._bc;
       int sz = r.size();
-      r._p = new double[sz];
-      r._sp = std::shared_ptr<double>(r._p, [](double *p) {delete[] p;});
+      r._p = new T[sz];
+      r._sp = std::shared_ptr<T>(r._p, [](T *p) {delete[] p;});
       if (empty) {
         for (int i = 0; i < sz; i++) {
           r._p[i] = 0.0;
@@ -155,6 +90,19 @@ public:
 
   wstTensorT(const wstTensorT& t) {
     (*this) = t;
+  }
+
+  template <typename Q>
+  void create(const wstTensorT<Q>& t) {
+    _ndim = t.ndim();
+    _dims = std::vector<int>(_ndim,0);
+    for (int d = 0; d < _ndim; d++) _dims[d] = t.dim(d);
+    _bc = std::vector<bool>(_ndim,false);
+    for (int d = 0; d < _ndim; d++) _bc[d] = t.bc(d);
+    int sz = size();
+    _p = new T[sz];
+    _sp = std::shared_ptr<T>(_p, [](T *p) {delete[] p;});
+    _allocated = true;
   }
 
   void create(int d0, bool periodic = false) {
@@ -275,6 +223,10 @@ public:
     return _dims[i0];
   }
 
+  bool bc(int i0) const {
+    assert(i0 < _ndim);
+    return _bc[i0];
+  }
 //  void print() const {
 //    int sz = this->size();
 //    for (int i = 0; i < sz; i++)
@@ -392,6 +344,16 @@ public:
     T s = this->norm2();
     this->scale(1./s); 
   }
+
+  // conversion from complex to real
+  operator wstTensorT<std::complex<T> > () const {
+    wstTensorT<std::complex<T> > r;
+    r.create(*this);
+    int sz = size();
+    for (int i = 0; i < sz; i++) r[i] = _p[i];
+    return r;
+  }
+
 };
 
 template <typename Q>
@@ -568,7 +530,7 @@ std::vector<wstTensorT<Q> > transform(const std::vector<wstTensorT<Q> >& orbs, c
 }
 
 template <typename Q>
-void fftshift(wstTensorT<Q>& t) {
+wstTensorT<Q> fftshift(wstTensorT<Q>& t) {
   // Can only do even numbers right now
   for (int d = 0; d < t.ndim(); d++)
     assert(t.dim(d)%2 == 0);
@@ -627,34 +589,125 @@ void fftshift(wstTensorT<Q>& t) {
 }
 
 
-wstTensorT<std::complex<double> > fft(const wstTensorT<std::complex<double> >& t) {
-  wstTensorT<std::complex<double> > R = copy(t,true);
+void print(const wstTensorT<double>& t1) {
+  int sz1 = t1.size();
+  printf("# dims:  %d\n", t1.ndim());
+  for (unsigned int i = 0; i < t1.ndim(); i++) {
+      printf("%d\n", t1.dim(i)); 
+  }
+  for (int i = 0; i < sz1; i++)
+    printf("%15.10f   \n", t1[i]);
+}
+
+void print2d(const wstTensorT<double>& t1) {
+  assert(t1.ndim() == 2);
+  printf("Dims (%d, %d)\n", t1.dim(0), t1.dim(1));
+  for (unsigned int i = 0; i < t1.dim(0); i++) {
+    for (unsigned int j = 0; j < t1.dim(1); j++) {
+      printf("%15.10f  ", t1(i,j));
+    }
+    printf("\n");
+  }
+}
+
+void print3d(const wstTensorT<double>& t1) {
+  assert(t1.ndim() == 3);
+  printf("Dims (%d, %d, %d)\n", t1.dim(0), t1.dim(1), t1.dim(2));
+  for (unsigned int i = 0; i < t1.dim(0); i++) {
+    printf("(%d,:,:)\n",i);
+    for (unsigned int j = 0; j < t1.dim(1); j++) {
+      for (unsigned int k = 0; k < t1.dim(2); k++) {
+        printf("%15.10f  ", t1(i,j,k));
+      }
+      printf("\n");
+    }
+    printf("\n");
+  }
+}
+void print(const wstTensorT<double>& t1, const wstTensorT<double>& t2) {
+  int sz1 = t1.size(); 
+  printf("# dims:  %d\n", t1.ndim());
+  for (unsigned int i = 0; i < t1.ndim(); i++) {
+      printf("%d     %d\n", t1.dim(i), t2.dim(i)); 
+  }
+  for (int i = 0; i < sz1; i++)
+    printf("%15.10f     %15.10f\n", t1[i], t2[i]);
+}
+
+void print(const wstTensorT<double>& t1, const wstTensorT<double>& t2, const wstTensorT<double>& t3) {
+  int sz1 = t1.size(); 
+  printf("# dims:  %d\n", t1.ndim());
+  for (unsigned int i = 0; i < t1.ndim(); i++) {
+      printf("%d     %d     %d\n", t1.dim(i), t2.dim(i), t3.dim(i)); 
+  }
+  for (int i = 0; i < sz1; i++)
+    printf("%15.10f     %15.10f     %15.10f\n", t1[i], t2[i], t3[i]);
+}
+
+void print(const wstTensorT<double>& t1, const wstTensorT<double>& t2, const wstTensorT<double>& t3, const wstTensorT<double>& t4) {
+  int sz1 = t1.size(); 
+  printf("# dims:  %d\n", t1.ndim());
+  for (unsigned int i = 0; i < t1.ndim(); i++) {
+      printf("%d     %d     %d     %d\n", t1.dim(i), t2.dim(i), t3.dim(i), t4.dim(i)); 
+  }
+  for (int i = 0; i < sz1; i++)
+    printf("%15.10f     %15.10f     %15.10f     %15.10f\n", t1[i], t2[i], t3[i], t4[i]);
+}
+
+template <typename Q>
+wstTensorT<Q> real(const wstTensorT<std::complex<Q> >&t) {
+  wstTensorT<Q> R;
+  R.create(t);
+  int sz = R.size();
+  for (int i = 0; i < sz; i++) R[i] = real(t[i]);
   return R;
 }
 
-//wstTensorT<std::complex<double> > fft(const wstTensorT<std::complex<double> >& t) {
-//  wstTensorT<std::complex<double> > R = copy(t,true);
-//  std::complex<double>* in = t.ptr();
-//  std::complex<double>* out = R.ptr();
-//  fftw_plan plan;
-//  if (t.ndim() == 1) {
-//    plan = fftw_plan_dft_1d(N, reinterpret_cast<fftw_complex*>(in), 
-//        reinterpret_cast<fftw_complex*>(out), FFTW_FORWARD, FFTW_ESTIMATE);
-//  }
-//  else if (t.ndim() == 2) {
-//    plan = fftw_plan_dft_2d(N, reinterpret_cast<fftw_complex*>(in), 
-//        reinterpret_cast<fftw_complex*>(out), FFTW_FORWARD, FFTW_ESTIMATE);
-//  }
-//  else if (t.ndim() == 3) {
-//    plan = fftw_plan_dft_3d(N, reinterpret_cast<fftw_complex*>(in), 
-//        reinterpret_cast<fftw_complex*>(out), FFTW_FORWARD, FFTW_ESTIMATE);
-//  }
-//  else {
-//    assert(false);
-//  }
-//  fftw_execute(p); 
-//  fftw_destroy_plan(p);
-//  return R;
-//}
+template <typename Q>
+wstTensorT<Q> imag(const wstTensorT<std::complex<Q> >&t) {
+  wstTensorT<Q> R;
+  R.create(t);
+  int sz = R.size();
+  for (int i = 0; i < sz; i++) R[i] = imag(t[i]);
+  return R;
+}
+
+template <typename Q>
+wstTensorT<Q> abs(const wstTensorT<std::complex<Q> >&t) {
+  wstTensorT<Q> R;
+  R.create(t);
+  int sz = R.size();
+  for (int i = 0; i < sz; i++) R[i] = std::abs(t[i]);
+  return R;
+}
+
+// I realize that this code is totally sub-optimal
+wstTensorT<std::complex<double> > fft(const wstTensorT<std::complex<double> >& t) {
+  wstTensorT<std::complex<double> > R = copy(t,false);
+  std::complex<double>* ptr = new std::complex<double>[t.size()];
+  fftw_plan plan;
+  if (t.ndim() == 1) {
+    plan = fftw_plan_dft_1d(t.dim(0), reinterpret_cast<fftw_complex*>(ptr), 
+        reinterpret_cast<fftw_complex*>(ptr), FFTW_FORWARD, FFTW_ESTIMATE);
+  }
+  else if (t.ndim() == 2) {
+    plan = fftw_plan_dft_2d(t.dim(0), t.dim(1), reinterpret_cast<fftw_complex*>(ptr), 
+        reinterpret_cast<fftw_complex*>(ptr), FFTW_FORWARD, FFTW_ESTIMATE);
+  }
+  else if (t.ndim() == 3) {
+    plan = fftw_plan_dft_3d(t.dim(0), t.dim(1), t.dim(2), reinterpret_cast<fftw_complex*>(ptr), 
+        reinterpret_cast<fftw_complex*>(ptr), FFTW_FORWARD, FFTW_ESTIMATE);
+  }
+  else {
+    assert(false);
+  }
+  // do dreadful copy (for now) 
+  for (int i = 0; i < t.size(); i++) ptr[i] = R[i];
+  fftw_execute(plan); 
+  // do another dreadful copy (for now) 
+  for (int i = 0; i < t.size(); i++) R[i] = ptr[i];
+  fftw_destroy_plan(plan);
+  return R;
+}
 
 #endif
