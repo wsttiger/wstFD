@@ -5,12 +5,12 @@
 
 const double alpha = 2.5;
 const double L = 5.0;
-const int NPTS = 20;
+const int NPTS = 22;
 
 #define PI 3.141592653589793238462643383279502884197
 
-double V(double x, double y, double z) {
-  return -alpha*(std::cos(2.0*PI*x/L)*cos(2.0*PI*y/L)*cos(2.0*PI*z/L)+1.0);
+double V(double L, double x) {
+  return -alpha*(std::cos(2.0*PI*x/L)+1.0);
 }
 
 template <typename Q>
@@ -23,35 +23,6 @@ private:
 public:
   OrbitalCache(int maxorbs = 10, double thresh = 1e-10)
    : _maxorbs(maxorbs), _thresh(thresh) {}
-
-//  std::vector<wstTensorT<Q> > append(const std::vector<wstTensorT<Q> >& orbs) {
-//    unsigned int szorbs = orbs.size();
-//    unsigned int szorbs2 = _orbs.size();
-//    std::vector<wstTensorT<Q> > combined_orbs;
-//    combined_orbs.insert(combined_orbs.begin(), orbs.begin(), orbs.end());
-//    combined_orbs.insert(combined_orbs.end(), _orbs.begin(), _orbs.end());
-//
-//    printf("OrbitalCache::append --> performing outer product ...\n");
-//    wstMatrixT<Q> S = outer(combined_orbs, combined_orbs);
-//    printf("OrbitalCache::append --> diagonalizing matrix ...\n");
-//    std::pair<wstMatrixT<Q>, wstMatrixT<Q> > result = diag(S);
-//    printf("OrbitalCache::append --> done  diagonalizing matrix ...\n");
-//    wstMatrixT<Q> eigs = result.first;
-//    wstMatrixT<Q> evecs = result.second;
-//
-//    int norbs = 0;
-//    for (int i = 0; i < S.nrows(); i++) {
-//      if (std::abs(eigs(i)) > _thresh) norbs++;
-//    }
-//
-//    std::vector<wstTensorT<Q> > R(norbs);
-//    for (int i = 0, j = 0; i < norbs; j++) {
-//      if (std::abs(eigs(j)) > _thresh) {
-//        R[i++] = copy_and_fill(orbs[0],evecs.col(j));
-//      }
-//    }
-//    return R; 
-//  }
 
   std::vector<wstTensorT<Q> > append(const std::vector<wstTensorT<Q> >& orbs) {
     unsigned int szorbs = orbs.size();
@@ -74,6 +45,7 @@ public:
     }
     std::vector<wstTensorT<Q> > rorbs = transform<Q>(orbs,evecs.cols(wstMatrixSlice(indx,S.ncols()-1)));
     normalize(rorbs);
+    _orbs = rorbs;
     return rorbs;
   }
 };
@@ -86,23 +58,19 @@ public:
 //}
 
 
-wstKernel3D<double> build_hamiltonian(const std::vector<double>& x, 
-                                      const std::vector<double>& y, 
-                                      const std::vector<double>& z, 
-                                      double hx, double hy, double hz, int npts) {
+wstKernel1D<double> build_hamiltonian(const std::vector<double>& x, double hx, int npts) {
   wstTensorT<double> Vpot;
-  //Vpot.create(std::bind(V, L, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), x, y, z, npts, npts, npts, true, true, true);
-  Vpot.create(V, x, y, z, npts, npts, npts, true, true, true);
-  wstKernel3D<double> H = create_laplacian_7p_3d(Vpot, hx, hy, hz, -0.5); 
+  Vpot.create(std::bind(V, L, std::placeholders::_1), x, npts, true);
+  //Vpot.create(V, x, y, z, npts, npts, npts, true, true, true);
+  wstKernel1D<double> H = create_laplacian_7p_1d(Vpot, hx, -0.5); 
   return H;
 }
 
-std::vector<wstTensorT<double> > make_initial_guess(const wstKernel3D<double>& H, int npts0, int npts1, int npts2, int norbs) {
+std::vector<wstTensorT<double> > make_initial_guess(const wstKernel1D<double>& H, int npts0, int norbs) {
   std::vector<wstTensorT<double> > orbs;
   for (int i = 0; i < norbs; i++) {
     if (i == 0) {
-      wstTensorT<double> f = constant_function<double>(npts0, npts1, npts2, 1.0, true, true, true);
-      //wstTensorT<double> f = random_function_double(npts0, npts1, npts2, true, true, true);
+      wstTensorT<double> f = constant_function<double>(npts0, 1.0, true);
       f.normalize();
       orbs.push_back(f);
     } else {
@@ -148,31 +116,63 @@ void test_orbital_cache() {
   print(orbs[2]);
 }
 
-void test_3d() {
-  printf("building vectors ...\n");
+bool test_hamiltonian1D() {
+  bool passed = true;
   vector<double> x = wstUtils::linspace(-L/2, L/2, NPTS);
-  vector<double> y = wstUtils::linspace(-L/2, L/2, NPTS);
-  vector<double> z = wstUtils::linspace(-L/2, L/2, NPTS);
-  printf("spacing ...\n");
   double hx = std::abs(x[1]-x[0]);
-  double hy = std::abs(y[1]-y[0]);
-  double hz = std::abs(y[1]-y[0]);
-  printf("building hamiltonian kernel ...\n");
-  wstKernel3D<double> Hker = build_hamiltonian(x, y, z, hx, hy, hz, NPTS);
-  printf("random guess orbitals ...\n");
-  std::vector<wstTensorT<double> > orbs = make_initial_guess(Hker, NPTS, NPTS, NPTS, 100);
-  printf("making overlap ...\n");
-  wstMatrixT<double> S = matrix_inner(orbs, orbs);
-  printf("making hamiltonian matrix ...\n");
+  wstKernel1D<double> Hker = build_hamiltonian(x, hx, NPTS);
+  wstTensorT<double> f0 = constant_function<double>(NPTS, 1.0, true);
+  f0.normalize();
+  wstTensorT<double> f1 = Hker.apply(f0);
+  f1.normalize();
+  wstTensorT<double> f2 = Hker.apply(f1);
+  f2.normalize();
+
+  std::vector<wstTensorT<double> > orbs;
+  orbs.push_back(f0);  
+  orbs.push_back(f1);  
+  orbs.push_back(f2);  
+
+  OrbitalCache<double> orbcache(3);
+  orbs = orbcache.append(orbs);
   wstMatrixT<double> H = Hker.sandwich(orbs);
-  H = 0.5*(H + transpose(H));
-  printf("diagonalizing hamiltonian matrix ...\n");
   std::pair<wstMatrixT<double>, wstMatrixT<double> > result = diag(H);
-  print(result.first);
+  wstMatrixT<double> eigs = result.first; 
+  passed = passed && (std::abs(eigs[0] + 4.05356273) < 1e-8);
+  passed = passed && (std::abs(eigs[1] + 8.50907795e-01) < 1e-8);
+  passed = passed && (std::abs(eigs[2] - 1.35212534) < 1e-8);
+  return passed;
+}
+
+bool test_hamiltonian1D_2() {
+  bool passed = true;
+  vector<double> x = wstUtils::linspace(-L/2, L/2, NPTS);
+  double hx = std::abs(x[1]-x[0]);
+  wstKernel1D<double> Hker = build_hamiltonian(x, hx, NPTS);
+  std::vector<wstTensorT<double> > orbs = make_initial_guess(Hker, NPTS, 3);
+
+  OrbitalCache<double> orbcache(3);
+  orbs = orbcache.append(orbs);
+  wstMatrixT<double> H = Hker.sandwich(orbs);
+  std::pair<wstMatrixT<double>, wstMatrixT<double> > result = diag(H);
+  wstMatrixT<double> eigs = result.first; 
+  passed = passed && (std::abs(eigs[0] + 4.05356273) < 1e-8);
+  passed = passed && (std::abs(eigs[1] + 8.50907795e-01) < 1e-8);
+  passed = passed && (std::abs(eigs[2] - 1.35212534) < 1e-8);
+  return passed;
 }
 
 int main(int argc, char** argv) {
-  test_3d();
-  //test_orbital_cache();
+  bool testResult = test_hamiltonian1D();
+  if (testResult)
+    printf("build_hamiltonian1D -- PASSED\n"); 
+  else
+    printf("build_hamiltonian1D -- FAILED\n"); 
+  testResult = test_hamiltonian1D_2();
+  if (testResult)
+    printf("build_hamiltonian1D using initial guesses and OrbitalCache -- PASSED\n"); 
+  else
+    printf("build_hamiltonian1D using initial guesses and OrbitalCache -- FAILED\n"); 
+
   return 0;
 }

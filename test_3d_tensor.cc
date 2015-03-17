@@ -30,7 +30,26 @@ double v2r(double L, double x, double y, double z)
 
 inline
 double gaussian(double coeff, double expnt, double x, double y, double z) {
-  return coeff*std::exp(expnt*(x*x + y*y + z*z));
+  return coeff*std::exp(-expnt*(x*x + y*y + z*z));
+}
+
+inline
+double pgaussian(double coeff, double expnt, double L, double x, double y, double z) {
+  double tol = 1e-10;
+  double rmax = std::sqrt((std::log(coeff)-std::log(tol))/expnt);
+  int maxR = round(rmax/L);
+  double s = 0.0;
+  for (int iR = -maxR; iR <= maxR; iR++) {
+    double xR2 = (x+iR*L)*(x+iR*L);
+    for (int jR = -maxR; jR <= maxR; jR++) {
+      double yR2 = (y+jR*L)*(y+jR*L);
+      for (int kR = -maxR; kR <= maxR; kR++) {
+        double zR2 = (z+kR*L)*(z+kR*L);
+        s += coeff*std::exp(-expnt*(xR2+yR2+zR2)); 
+      }
+    }
+  }
+  return s;
 }
 
 bool test_7_pts_lap_3d()
@@ -204,16 +223,33 @@ void test_3d_fft() {
   vector<double> z = wstUtils::linspace(-L/2, L/2, NPTS);
 
   wstTensorT<double> G;
-  G.create(std::bind(gaussian, 1.0, -0.5, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), x, y, z, NPTS, NPTS, NPTS);
+  G.create(std::bind(gaussian, 1.0, 0.5, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), x, y, z, NPTS, NPTS, NPTS);
   wstTensorT<std::complex<double> > FG = fft(G);
   fftshift(FG);
   print(real(FG));
   //print(G);
 }
 
+void test_bsh() {
+  const double L = 5.0;
+  const int NPTS = 22;
+
+  vector<double> x = wstUtils::linspace(-L/2, L/2, NPTS, true);
+  vector<double> y = wstUtils::linspace(-L/2, L/2, NPTS, true);
+  vector<double> z = wstUtils::linspace(-L/2, L/2, NPTS, true);
+
+  wstTensorT<double> G;
+  G.create(std::bind(pgaussian, 1.0, 0.5, L, std::placeholders::_1, std::placeholders::_2, std::placeholders::_3), x, y, z, NPTS, NPTS, NPTS);
+  wstTensorT<std::complex<double> > FG = fft(G);
+  //fftshift(FG);
+  //print(real(FG));
+  print(G);
+}
+
 int main(int argc, char** argv)
 {
-  test_3d_fft();
+  test_bsh();
+  //test_3d_fft();
   assert(false);
 
   bool testResult = false;

@@ -178,6 +178,16 @@ public:
   }
 
   // index operator
+  T& operator[](int i) {
+    return _p[i];
+  }
+
+  // index operator
+  T& operator[](int i) const {
+    return _p[i];
+  }
+
+  // index operator
   T& operator()(int i) {
     return _p[i];
   }
