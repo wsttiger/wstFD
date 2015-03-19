@@ -25,10 +25,12 @@ struct wstMatrixSlice {
   wstMatrixSlice(int i0, int i1) 
    : i0(i0), i1(i1), j0(0), j1(0), ndim(1) {}
 
+  // size of first dimension
   int n0() const {
     return i1-i0+1;
   }
 
+  // size of second dimension
   int n1() const {
     return j1-j0+1;
   }
@@ -302,6 +304,16 @@ public:
   std::vector<wstMatrixT<T> > cols(const wstMatrixSlice& sl) {
     assert(sl.ndim == 1);
     int nc = sl.n0();
+    std::vector<wstMatrixT<T> > R(nc);
+    for (int j = 0; j < nc; j++) {
+      R[j] = col(j+sl.i0);
+    }
+    return R;
+  }
+
+  // extract all column vectors from matrix
+  std::vector<wstMatrixT<T> > cols() {
+    int nc = ncols();
     std::vector<wstMatrixT<T> > R(nc);
     for (int j = 0; j < nc; j++) {
       R[j] = col(j);

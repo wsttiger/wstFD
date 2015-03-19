@@ -50,12 +50,38 @@ public:
   }
 };
 
-//std::vector<wstKernel3D<double> > apply_bsh(const std::vector<double>& x,
-//                                            const std::vector<double>& y,
-//                                            const std::vector<double>& z,
-//                                            double hx, double hy, double hz,
-//                                            const std::vector<wstTensorT<double> > orbs) {
-//}
+std::vector<double> klinspace(int npts, double dx) {
+  assert(npts % 2 == 0);
+  std::vector<double> r;
+  int npts2 = npts / 2;
+  for (int i = -npts2; i < npts2; i++) {
+    r.push_back((double)i/dx/(double)npts);
+  }
+  return r;
+}
+
+wstTensorT<std::complex<double> > apply_bsh(const std::vector<double>& x,
+                        double hx, 
+                        double mu,
+                        const wstTensorT<std::complex<double> >& orb) {
+  double mu2 = mu*mu;
+  int npts = x.size();
+  double dx = x[2]-x[1];
+  printf("calling klinspace\n");
+  std::vector<double> kx = klinspace(npts, dx);
+  printf("calling fft\n");
+  wstTensorT<std::complex<double> > r = fft(orb);
+  printf("calling fftshift\n");
+  fftshift(r);
+  printf("applying bsh\n");
+  for (int i = 0; i < npts; i++) {
+    r(i) = r(i)/(kx[i]*kx[i] + mu2);
+  }
+  printf("calling fftshift\n");
+  fftshift(r);
+  printf("returning\n\n");
+  return r;
+}
 
 
 wstKernel1D<double> build_hamiltonian(const std::vector<double>& x, double hx, int npts) {
@@ -162,6 +188,29 @@ bool test_hamiltonian1D_2() {
   return passed;
 }
 
+bool test_bsh() {
+  bool passed = true;
+  // Do all of this to get an interesting orbital
+  vector<double> x = wstUtils::linspace(-L/2, L/2, NPTS);
+  double hx = std::abs(x[1]-x[0]);
+  wstKernel1D<double> Hker = build_hamiltonian(x, hx, NPTS);
+  std::vector<wstTensorT<double> > orbs = make_initial_guess(Hker, NPTS, 3);
+  OrbitalCache<double> orbcache(3);
+  orbs = orbcache.append(orbs);
+  //wstMatrixT<double> H = Hker.sandwich(orbs);
+  //std::pair<wstMatrixT<double>, wstMatrixT<double> > result = diag(H);
+  //wstMatrixT<double> eigs = result.first; 
+  //wstMatrixT<double> evecs = result.second;
+ 
+//  orbs = transform(orbs,evecs.cols());
+  wstTensorT<std::complex<double> > f = apply_bsh(x, hx, -0.2, orbs[0]);
+  wstTensorT<double> freal = real(f);
+  wstTensorT<double> fimag = imag(f);
+  print(freal, fimag);
+
+  return passed;
+}
+
 int main(int argc, char** argv) {
   bool testResult = test_hamiltonian1D();
   if (testResult)
@@ -173,6 +222,11 @@ int main(int argc, char** argv) {
     printf("build_hamiltonian1D using initial guesses and OrbitalCache -- PASSED\n"); 
   else
     printf("build_hamiltonian1D using initial guesses and OrbitalCache -- FAILED\n"); 
+  testResult = test_bsh();
+  if (testResult)
+    printf("test_bsh -- PASSED\n"); 
+  else
+    printf("test_bsh -- FAILED\n"); 
 
   return 0;
 }

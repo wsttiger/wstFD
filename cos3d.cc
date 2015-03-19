@@ -72,6 +72,7 @@ public:
         indx = i; 
       }
     }
+    print(S);
     std::vector<wstTensorT<Q> > rorbs = transform<Q>(orbs,evecs.cols(wstMatrixSlice(indx,S.ncols()-1)));
     normalize(rorbs);
     return rorbs;
@@ -172,7 +173,7 @@ void test_3d() {
 }
 
 int main(int argc, char** argv) {
-  test_3d();
-  //test_orbital_cache();
+  //test_3d();
+  test_orbital_cache();
   return 0;
 }

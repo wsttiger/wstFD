@@ -529,6 +529,7 @@ std::vector<wstTensorT<Q> > transform(const std::vector<wstTensorT<Q> >& orbs, c
   return orbs2;
 }
 
+// for even
 template <typename Q>
 wstTensorT<Q> fftshift(wstTensorT<Q>& t) {
   // Can only do even numbers right now
@@ -537,10 +538,13 @@ wstTensorT<Q> fftshift(wstTensorT<Q>& t) {
   // 0 <--> 1
   if (t.ndim() == 1) {
     int m2 = t.dim(0)/2;
+    printf("m2: %d\n", m2);
     for (int i = 0; i < m2; i++) {
+      printf("%d\n", i);
       Q t01   = t(i);
       t(i)    = t(i+m2);
       t(i+m2) = t01;
+      printf("    %d\n", i);
     }
   }
   // 00 <--> 11
@@ -548,6 +552,7 @@ wstTensorT<Q> fftshift(wstTensorT<Q>& t) {
   else if (t.ndim() == 2) {
     int m2 = t.dim(0)/2;
     int n2 = t.dim(1)/2;
+    assert(false);
     for (int i = 0; i < m2; i++) {
       for (int j = 0; j < n2; j++) {
         Q t03          = t(i,j);
@@ -567,6 +572,7 @@ wstTensorT<Q> fftshift(wstTensorT<Q>& t) {
     int m2 = t.dim(0)/2;
     int n2 = t.dim(1)/2;
     int p2 = t.dim(2)/2;
+    assert(false);
     for (int i = 0; i < m2; i++) {
       for (int j = 0; j < n2; j++) {
         for (int k = 0; k < p2; k++) {
@@ -586,8 +592,11 @@ wstTensorT<Q> fftshift(wstTensorT<Q>& t) {
       }
     }
   }
+  else {
+    assert(false);
+  }
+  printf("breaking free .... \n");
 }
-
 
 void print(const wstTensorT<double>& t1) {
   int sz1 = t1.size();
