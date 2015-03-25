@@ -52,35 +52,32 @@ public:
 
 std::vector<double> klinspace(int npts, double dx) {
   assert(npts % 2 == 0);
-  std::vector<double> r;
+  std::vector<double> r(npts);
   int npts2 = npts / 2;
-  for (int i = -npts2; i < npts2; i++) {
-    r.push_back((double)i/dx/(double)npts);
+  double dk = 2.0*PI/dx/(double)npts;
+  double k0 = -npts2*dk;
+  //for (int i : r) {
+  for (int i = 0; i < npts; i++) {
+    r[i] = k0 + i*dk;
   }
   return r;
 }
 
-wstTensorT<std::complex<double> > apply_bsh(const std::vector<double>& x,
+wstTensorT<std::complex<double> > apply_bsh_1d(const std::vector<double>& x,
                         double hx, 
                         double mu,
                         const wstTensorT<std::complex<double> >& orb) {
   double mu2 = mu*mu;
   int npts = x.size();
   double dx = x[2]-x[1];
-  printf("calling klinspace\n");
   std::vector<double> kx = klinspace(npts, dx);
-  printf("calling fft\n");
   wstTensorT<std::complex<double> > r = fft(orb);
-  printf("calling fftshift\n");
   fftshift(r);
-  printf("applying bsh\n");
   for (int i = 0; i < npts; i++) {
     r(i) = r(i)/(kx[i]*kx[i] + mu2);
   }
-  printf("calling fftshift\n");
   fftshift(r);
-  printf("returning\n\n");
-  return r;
+  return ifft(r);
 }
 
 
@@ -203,30 +200,44 @@ bool test_bsh() {
   //wstMatrixT<double> evecs = result.second;
  
 //  orbs = transform(orbs,evecs.cols());
-  wstTensorT<std::complex<double> > f = apply_bsh(x, hx, -0.2, orbs[0]);
+  wstTensorT<std::complex<double> > f = apply_bsh_1d(x, hx, -0.2, orbs[0]);
   wstTensorT<double> freal = real(f);
   wstTensorT<double> fimag = imag(f);
-  print(freal, fimag);
+  //print(orbs[0]);
+  //print(freal, fimag);
 
   return passed;
 }
 
+void test_apply_speed() {
+  bool passed = true;
+  vector<double> x = wstUtils::linspace(-L/2, L/2, NPTS);
+  double hx = std::abs(x[1]-x[0]);
+  wstKernel1D<double> Hker = build_hamiltonian(x, hx, NPTS);
+  wstTensorT<double> f = constant_function<double>(NPTS, 3.4, true);
+  for (int i = 0; i < 100000; i++) {
+    wstTensorT<double> g = Hker.apply(f);
+    wstTensorT<std::complex<double> > h = apply_bsh_1d(x, hx, 1.22, g);
+  }
+}
+
 int main(int argc, char** argv) {
-  bool testResult = test_hamiltonian1D();
-  if (testResult)
-    printf("build_hamiltonian1D -- PASSED\n"); 
-  else
-    printf("build_hamiltonian1D -- FAILED\n"); 
-  testResult = test_hamiltonian1D_2();
-  if (testResult)
-    printf("build_hamiltonian1D using initial guesses and OrbitalCache -- PASSED\n"); 
-  else
-    printf("build_hamiltonian1D using initial guesses and OrbitalCache -- FAILED\n"); 
-  testResult = test_bsh();
-  if (testResult)
-    printf("test_bsh -- PASSED\n"); 
-  else
-    printf("test_bsh -- FAILED\n"); 
+  test_apply_speed();
+//  bool testResult = test_hamiltonian1D();
+//  if (testResult)
+//    printf("build_hamiltonian1D -- PASSED\n"); 
+//  else
+//    printf("build_hamiltonian1D -- FAILED\n"); 
+//  testResult = test_hamiltonian1D_2();
+//  if (testResult)
+//    printf("build_hamiltonian1D using initial guesses and OrbitalCache -- PASSED\n"); 
+//  else
+//    printf("build_hamiltonian1D using initial guesses and OrbitalCache -- FAILED\n"); 
+//  testResult = test_bsh();
+//  if (testResult)
+//    printf("test_bsh -- PASSED\n"); 
+//  else
+//    printf("test_bsh -- FAILED\n"); 
 
   return 0;
 }
