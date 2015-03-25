@@ -248,9 +248,9 @@ void test_bsh() {
 
 int main(int argc, char** argv)
 {
-  test_bsh();
-  //test_3d_fft();
-  assert(false);
+//  test_bsh();
+//  //test_3d_fft();
+//  assert(false);
 
   bool testResult = false;
   testResult = test_3_pts_lap_3d();
