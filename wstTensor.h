@@ -357,6 +357,13 @@ public:
 };
 
 template <typename Q>
+wstTensorT<Q> operator*(const Q& s, const wstTensorT<Q>& A) {
+  wstTensorT<Q> r = copy(A);
+  r.scale(s);
+  return r;
+}
+
+template <typename Q>
 wstTensorT<Q> gaxpy(const Q& a, const wstTensorT<Q>& T1, const Q& b, const wstTensorT<Q>& T2) {
   return T1.gaxpy_oop(a, T2, b);
 }
@@ -531,20 +538,17 @@ std::vector<wstTensorT<Q> > transform(const std::vector<wstTensorT<Q> >& orbs, c
 
 // for even
 template <typename Q>
-wstTensorT<Q> fftshift(wstTensorT<Q>& t) {
+void fftshift(wstTensorT<Q>& t) {
   // Can only do even numbers right now
   for (int d = 0; d < t.ndim(); d++)
     assert(t.dim(d)%2 == 0);
   // 0 <--> 1
   if (t.ndim() == 1) {
     int m2 = t.dim(0)/2;
-    printf("m2: %d\n", m2);
     for (int i = 0; i < m2; i++) {
-      printf("%d\n", i);
       Q t01   = t(i);
       t(i)    = t(i+m2);
       t(i+m2) = t01;
-      printf("    %d\n", i);
     }
   }
   // 00 <--> 11
@@ -552,7 +556,6 @@ wstTensorT<Q> fftshift(wstTensorT<Q>& t) {
   else if (t.ndim() == 2) {
     int m2 = t.dim(0)/2;
     int n2 = t.dim(1)/2;
-    assert(false);
     for (int i = 0; i < m2; i++) {
       for (int j = 0; j < n2; j++) {
         Q t03          = t(i,j);
@@ -572,7 +575,6 @@ wstTensorT<Q> fftshift(wstTensorT<Q>& t) {
     int m2 = t.dim(0)/2;
     int n2 = t.dim(1)/2;
     int p2 = t.dim(2)/2;
-    assert(false);
     for (int i = 0; i < m2; i++) {
       for (int j = 0; j < n2; j++) {
         for (int k = 0; k < p2; k++) {
@@ -595,7 +597,6 @@ wstTensorT<Q> fftshift(wstTensorT<Q>& t) {
   else {
     assert(false);
   }
-  printf("breaking free .... \n");
 }
 
 void print(const wstTensorT<double>& t1) {
@@ -706,6 +707,35 @@ wstTensorT<std::complex<double> > fft(const wstTensorT<std::complex<double> >& t
   else if (t.ndim() == 3) {
     plan = fftw_plan_dft_3d(t.dim(0), t.dim(1), t.dim(2), reinterpret_cast<fftw_complex*>(ptr), 
         reinterpret_cast<fftw_complex*>(ptr), FFTW_FORWARD, FFTW_ESTIMATE);
+  }
+  else {
+    assert(false);
+  }
+  // do dreadful copy (for now) 
+  for (int i = 0; i < t.size(); i++) ptr[i] = R[i];
+  fftw_execute(plan); 
+  // do another dreadful copy (for now) 
+  for (int i = 0; i < t.size(); i++) R[i] = ptr[i];
+  fftw_destroy_plan(plan);
+  return R;
+}
+
+// More sub-optimal code
+wstTensorT<std::complex<double> > ifft(const wstTensorT<std::complex<double> >& t) {
+  wstTensorT<std::complex<double> > R = copy(t,false);
+  std::complex<double>* ptr = new std::complex<double>[t.size()];
+  fftw_plan plan;
+  if (t.ndim() == 1) {
+    plan = fftw_plan_dft_1d(t.dim(0), reinterpret_cast<fftw_complex*>(ptr), 
+        reinterpret_cast<fftw_complex*>(ptr), FFTW_BACKWARD, FFTW_ESTIMATE);
+  }
+  else if (t.ndim() == 2) {
+    plan = fftw_plan_dft_2d(t.dim(0), t.dim(1), reinterpret_cast<fftw_complex*>(ptr), 
+        reinterpret_cast<fftw_complex*>(ptr), FFTW_BACKWARD, FFTW_ESTIMATE);
+  }
+  else if (t.ndim() == 3) {
+    plan = fftw_plan_dft_3d(t.dim(0), t.dim(1), t.dim(2), reinterpret_cast<fftw_complex*>(ptr), 
+        reinterpret_cast<fftw_complex*>(ptr), FFTW_BACKWARD, FFTW_ESTIMATE);
   }
   else {
     assert(false);
