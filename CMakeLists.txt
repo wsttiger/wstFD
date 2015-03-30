@@ -3,7 +3,7 @@ project (wstFD)
 
 set (FFTW "/Users/wsttiger/local/fftw-3.3.4-icc")
 set (CMAKE_CXX_FLAGS "-profile-functions -profile-loops=all -profile-loops-report=2 -g -O2 -std=c++11 -mkl")
-
+set (CMAKE_EXE_LINKER_FLAGS "-Wl,-no_pie")
 include_directories("${FFTW}/include")
 
 add_executable(cos1d cos1d.cc)

@@ -484,6 +484,19 @@ wstMatrixT<Q> outer(const std::vector<wstTensorT<Q> >& v1, const std::vector<wst
 //}
 //
 
+// create a random 1-D function (obviously cannot be periodic)
+wstTensorT<double> random_function_double(int d0, bool periodic0 = false) {
+  wstTensorT<double> r;
+  r.create(d0, periodic0);
+  int sz = d0;
+  double* p = r.ptr();
+  for (int i = 0; i < sz; i++) {
+    int i1 = rand();
+    double t1 = (i1 % 100000000)/100000000.0;
+    p[i] = t1;
+  }
+  return r;
+}
 // create a random 3-D function (obviously cannot be periodic)
 wstTensorT<double> random_function_double(int d0, int d1, int d2, bool periodic0 = false, bool periodic1 = false, bool periodic2 = false) {
   wstTensorT<double> r;
