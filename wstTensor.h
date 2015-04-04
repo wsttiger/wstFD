@@ -324,26 +324,26 @@ public:
     for (int i = 0; i < sz; i++) _p[i] *= a;
   }
  
-  T inner(const wstTensorT& t) const {
-    int sz1 = this->size();
-    int sz2 = t.size();
-    assert(sz1 == sz2);
-    T rval = 0.0;
-    for (int i = 0; i < sz1; i++) rval += _p[i]*t._p[i]; 
-    return rval;
-  }
+//  T inner(const wstTensorT& t) const {
+//    int sz1 = this->size();
+//    int sz2 = t.size();
+//    assert(sz1 == sz2);
+//    T rval = 0.0;
+//    for (int i = 0; i < sz1; i++) rval += _p[i]*t._p[i]; 
+//    return rval;
+//  }
 
-  T norm2() const {
-    int sz = this->size();
-    T rval = 0.0;
-    for (int i = 0; i < sz; i++) rval += _p[i]*_p[i]; 
-    return std::sqrt(rval);
-  }
+//  T norm2() const {
+//    int sz = this->size();
+//    T rval = 0.0;
+//    for (int i = 0; i < sz; i++) rval += _p[i]*_p[i]; 
+//    return std::sqrt(rval);
+//  }
 
-  void normalize() {
-    T s = this->norm2();
-    this->scale(1./s); 
-  }
+//  void normalize() {
+//    T s = this->norm2();
+//    this->scale(1./s); 
+//  }
 
   // conversion from complex to real
   operator wstTensorT<std::complex<T> > () const {
@@ -355,6 +355,10 @@ public:
   }
 
 };
+
+// typedefs
+typedef wstTensorT<double> double_tensor;
+typedef wstTensorT<std::complex<double> > complex_tensor;
 
 template <typename Q>
 wstTensorT<Q> operator*(const Q& s, const wstTensorT<Q>& A) {
@@ -368,14 +372,55 @@ wstTensorT<Q> gaxpy(const Q& a, const wstTensorT<Q>& T1, const Q& b, const wstTe
   return T1.gaxpy_oop(a, T2, b);
 }
 
-template <typename Q>
-double inner(const wstTensorT<Q>& t1, const wstTensorT<Q>& t2) {
-  return t1.inner(t2);
+std::complex<double> inner(const wstTensorT<std::complex<double> >& t1, const wstTensorT<std::complex<double> >& t2) {
+  std::complex<double> r = 0.0;
+  assert(t1.size() == t2.size());
+  int sz = t1.size();
+  for (int i = 0; i < sz; i++) {
+    r += std::conj(t1[i])*t2[i];
+  }
+  return r;
+}
+
+std::complex<double> inner(const wstTensorT<double>& t1, const wstTensorT<std::complex<double> >& t2) {
+  std::complex<double> r = 0.0;
+  assert(t1.size() == t2.size());
+  int sz = t1.size();
+  for (int i = 0; i < sz; i++) {
+    r += t1[i]*t2[i];
+  }
+  return r;
+}
+
+std::complex<double> inner(const wstTensorT<std::complex<double> >& t1, const wstTensorT<double>& t2) {
+  std::complex<double> r = 0.0;
+  assert(t1.size() == t2.size());
+  int sz = t1.size();
+  for (int i = 0; i < sz; i++) {
+    r += std::conj(t1[i])*t2[i];
+  }
+  return r;
+}
+
+double inner(const wstTensorT<double>& t1, const wstTensorT<double>& t2) {
+  double r = 0.0;
+  assert(t1.size() == t2.size());
+  int sz = t1.size();
+  for (int i = 0; i < sz; i++) {
+    r += t1[i]*t2[i];
+  }
+  return r;
 }
 
 template <typename Q>
 double norm2(const wstTensorT<Q>& t) {
-  return t.norm2();
+  return std::abs(std::sqrt(inner(t, t)));
+}
+
+template <typename Q>
+void normalize(wstTensorT<Q>& t) {
+  double s = norm2(t);
+  t.scale(1./s);
 }
 
 // create an empty 1-D function
@@ -457,33 +502,6 @@ wstMatrixT<Q> outer(const std::vector<wstTensorT<Q> >& v1, const std::vector<wst
   return S;
 }
 
-//  void fillrandom() {
-//    int sz = this->size();
-//    for (int i = 0; i < sz; i++) {
-//      int i1 = rand();
-//      double t1 = (i1 % 100000000)/100000000.0;
-//      _p[i] = t1;
-//    }
-//  }
-
-//// create a random 1-D function (obviously cannot be periodic)
-//wstTensorT random_function(int d0, bool periodic = false) {
-//  wstTensorT r;
-//  r.create(d0, periodic);
-//  r.fillrandom();  
-//  return r;
-//}
-//
-
-//// create a random 2-D function (obviously cannot be periodic)
-//wstTensorT random_function(int d0, int d1, bool periodic0 = false, bool periodic1 = false) {
-//  wstTensorT r;
-//  r.create(d0, d1, periodic0, periodic1);
-//  r.fillrandom();  
-//  return r;
-//}
-//
-
 // create a random 1-D function (obviously cannot be periodic)
 wstTensorT<double> random_function_double(int d0, bool periodic0 = false) {
   wstTensorT<double> r;
@@ -497,6 +515,21 @@ wstTensorT<double> random_function_double(int d0, bool periodic0 = false) {
   }
   return r;
 }
+
+// create a random 2-D function (obviously cannot be periodic)
+wstTensorT<double> random_function_double(int d0, int d1, bool periodic0 = false, bool periodic1 = false) {
+  wstTensorT<double> r;
+  r.create(d0, periodic0, periodic1);
+  int sz = d0*d1;
+  double* p = r.ptr();
+  for (int i = 0; i < sz; i++) {
+    int i1 = rand();
+    double t1 = (i1 % 100000000)/100000000.0;
+    p[i] = t1;
+  }
+  return r;
+}
+
 // create a random 3-D function (obviously cannot be periodic)
 wstTensorT<double> random_function_double(int d0, int d1, int d2, bool periodic0 = false, bool periodic1 = false, bool periodic2 = false) {
   wstTensorT<double> r;
@@ -511,9 +544,10 @@ wstTensorT<double> random_function_double(int d0, int d1, int d2, bool periodic0
   return r;
 }
 
-wstMatrixT<double> matrix_inner(const std::vector<wstTensorT<double> >& v1, const std::vector<wstTensorT<double> >& v2) {
+template <typename Q>
+wstMatrixT<Q> matrix_inner(const std::vector<wstTensorT<Q> >& v1, const std::vector<wstTensorT<Q> >& v2) {
   int nsize = v1.size();
-  wstMatrixT<double> R = zeros<double>(nsize, nsize);
+  wstMatrixT<Q> R = zeros<Q>(nsize, nsize);
   for (int i = 0; i < nsize; i++) {
     for (int j = 0; j < nsize; j++) {
       R(i,j) = inner(v1[i], v2[j]);
@@ -527,7 +561,7 @@ void normalize(std::vector<wstTensorT<Q> >& vs) {
   int nsize = vs.size();
   for (int i = 0; i < nsize; i++) {
     wstTensorT<Q> f = vs[i];
-    f.normalize(); 
+    normalize(f); 
   }
 }
 
