@@ -104,11 +104,11 @@ std::vector<wstTensorT<double> > make_initial_guess(const wstKernel3D<double>& H
     if (i == 0) {
       wstTensorT<double> f = constant_function<double>(npts0, npts1, npts2, 1.0, true, true, true);
       //wstTensorT<double> f = random_function_double(npts0, npts1, npts2, true, true, true);
-      f.normalize();
+      normalize(f);
       orbs.push_back(f);
     } else {
       wstTensorT<double> f = H.apply(orbs[i-1]);
-      f.normalize();
+      normalize(f);
       orbs.push_back(f);
     }
   }

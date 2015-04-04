@@ -94,11 +94,11 @@ std::vector<wstTensorT<double> > make_initial_guess(const wstKernel1D<double>& H
   for (int i = 0; i < norbs; i++) {
     if (i == 0) {
       wstTensorT<double> f = constant_function<double>(npts0, 1.0, true);
-      f.normalize();
+      normalize(f);
       orbs.push_back(f);
     } else {
       wstTensorT<double> f = H.apply(orbs[i-1]);
-      f.normalize();
+      normalize(f);
       orbs.push_back(f);
     }
   }
@@ -145,11 +145,11 @@ bool test_hamiltonian1D() {
   double hx = std::abs(x[1]-x[0]);
   wstKernel1D<double> Hker = build_hamiltonian(x, hx, NPTS);
   wstTensorT<double> f0 = constant_function<double>(NPTS, 1.0, true);
-  f0.normalize();
+  normalize(f0);
   wstTensorT<double> f1 = Hker.apply(f0);
-  f1.normalize();
+  normalize(f1);
   wstTensorT<double> f2 = Hker.apply(f1);
-  f2.normalize();
+  normalize(f2);
 
   std::vector<wstTensorT<double> > orbs;
   orbs.push_back(f0);  
