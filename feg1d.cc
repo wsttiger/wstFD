@@ -98,17 +98,17 @@ std::vector<wstTensorT<double> > make_initial_guess(const wstKernel1D<double>& H
     if (i == 0) {
       if (random) {
         wstTensorT<double> f = random_function_double(npts0, true);
-        f.normalize();
+        normalize(f);
         orbs.push_back(f);
       }
       else {
         wstTensorT<double> f = constant_function<double>(npts0, 1.0, true);
-        f.normalize();
+        normalize(f);
         orbs.push_back(f);
       }
     } else {
       wstTensorT<double> f = (random) ? random_function_double(npts0, true) : H.apply(orbs[i-1]);
-      f.normalize();
+      normalize(f);
       orbs.push_back(f);
     }
   }

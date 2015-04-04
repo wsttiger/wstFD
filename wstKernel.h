@@ -36,6 +36,7 @@ private:
     
     wstStencil1D() : x(0), c(T(0)) {}
     wstStencil1D(int x, T c) : x(x), c(c) {}
+
   };
 
   vector<wstStencil1D> _stencil;
@@ -68,6 +69,71 @@ public:
     for (unsigned int i = 0; i < xoffset.size(); i++) 
       _stencil[i] = wstStencil1D(xoffset[i], coeffs[i]);
     _local = false;
+  }
+
+  // include ability to convert from real to complex
+  operator wstKernel1D<std::complex<T> > () const {
+    wstKernel1D<std::complex<T> > ker;
+    std::vector<std::complex<T> > coeffs;
+    std::vector<int> xoffset;
+    int stsz = _stencil.size();
+    for (int i = 0; i < stsz; i++) {
+      coeffs.push_back(_stencil[i].c);
+      xoffset.push_back(_stencil[i].x);
+    }
+    if (_local)
+      ker.create(_localf,xoffset,coeffs);
+    else
+      ker.create(xoffset,coeffs);
+    return ker;
+  }
+
+  // add in an operator
+  wstKernel1D<T> operator+(const wstKernel1D& ker) const {
+    wstKernel1D<T> rker;
+    std::vector<T> coeffs;
+    std::vector<int> xoffset;
+    int stsz1 = _stencil.size();
+    int stsz2 = ker._stencil.size();
+    for (int i = 0; i < stsz1; i++) {
+      coeffs.push_back(_stencil[i].c);
+      xoffset.push_back(_stencil[i].x);
+    }
+    for (int i = 0; i < stsz2; i++) {
+      coeffs.push_back(ker._stencil[i].c);
+      xoffset.push_back(ker._stencil[i].x);
+    }
+    if (!_local && !ker._local)
+      rker.create(xoffset,coeffs);
+    else if (_local && !ker._local)
+      rker.create(_localf,xoffset,coeffs);
+    else if (!_local && ker._local)
+      rker.create(ker._localf,xoffset,coeffs);
+    else if (_local && ker._local)
+      rker.create(ker._localf+_localf,xoffset,coeffs);
+    else
+      assert(false);
+    return rker; 
+  }
+
+  // add in an operator
+  wstKernel1D<T> operator+(T s) const {
+    wstKernel1D<T> rker;
+    std::vector<T> coeffs;
+    std::vector<int> xoffset;
+    int stsz = _stencil.size();
+    for (int i = 0; i < stsz; i++) {
+      coeffs.push_back(_stencil[i].c);
+      xoffset.push_back(_stencil[i].x);
+    }
+    // put value s with 0 offset
+    xoffset.push_back(0);
+    coeffs.push_back(s);
+    if (_local)
+      rker.create(_localf,xoffset,coeffs);
+    else
+      rker.create(xoffset,coeffs);
+    return rker; 
   }
 
   virtual wstTensorT<T> apply(const wstTensorT<T>& t) const {
@@ -137,6 +203,25 @@ public:
     _local = false;
   }
 
+  // include ability to convert from real to complex
+  operator wstKernel2D<std::complex<T> > () const {
+    wstKernel2D<std::complex<T> > ker;
+    std::vector<std::complex<T> > coeffs;
+    std::vector<int> xoffset;
+    std::vector<int> yoffset;
+    int stsz = _stencil.size();
+    for (int i = 0; i < stsz; i++) {
+      coeffs.push_back(_stencil[i].c);
+      xoffset.push_back(_stencil[i].x);
+      yoffset.push_back(_stencil[i].y);
+    }
+    if (_local)
+      ker.create(_localf,xoffset,yoffset,coeffs);
+    else
+      ker.create(xoffset,yoffset,coeffs);
+    return ker;
+  }
+
   virtual wstTensorT<T> apply(const wstTensorT<T>& t) const {
     wstTensorT<T> r = copy(t,true);
     int d0 = t.dim(0); int d1 = t.dim(1); 
@@ -203,6 +288,27 @@ public:
     for (unsigned int i = 0; i < xoffset.size(); i++) 
       _stencil[i] = wstStencil3D(xoffset[i], yoffset[i], zoffset[i], coeffs[i]);
     _local = false;
+  }
+
+  // include ability to convert from real to complex
+  operator wstKernel3D<std::complex<T> > () const {
+    wstKernel3D<std::complex<T> > ker;
+    std::vector<std::complex<T> > coeffs;
+    std::vector<int> xoffset;
+    std::vector<int> yoffset;
+    std::vector<int> zoffset;
+    int stsz = _stencil.size();
+    for (int i = 0; i < stsz; i++) {
+      coeffs.push_back(_stencil[i].c);
+      xoffset.push_back(_stencil[i].x);
+      yoffset.push_back(_stencil[i].y);
+      zoffset.push_back(_stencil[i].z);
+    }
+    if (_local)
+      ker.create(_localf,xoffset,yoffset,zoffset,coeffs);
+    else
+      ker.create(xoffset,yoffset,zoffset,coeffs);
+    return ker;
   }
 
   wstTensorT<T> apply(const wstTensorT<T>& t) const {
@@ -533,6 +639,22 @@ wstKernel3D<double> create_laplacian_7p_3d(double hx, double hy, double hz, doub
   return kernel;
 }
 
+wstKernel1D<std::complex<double> > create_Dx_7p_1d(double hx, double kx, const std::complex<double>& scale) {
+  int offsets7p[7] = {-3, -2, -1, 0, 1, 2, 3};
+  double coeffs7p[7] = {1.0/60.0, -9.0/60.0, 45.0/60.0, 0.0, 45.0/60.0, -9.0/60.0, 1.0/60.0};
+  vector<int> xoffset7p(7,0); 
+  vector<std::complex<double> > vcoeffs7p(7,0.0);
+  int p = 0;
+  for (int i = 0; i < 7; i++) {
+    xoffset7p[i+p] = offsets7p[i];   
+    vcoeffs7p[i+p] = scale*coeffs7p[i]/hx;
+  }
+
+  wstKernel1D<std::complex<double> > kernel;
+  kernel.create(xoffset7p, vcoeffs7p);
+  return kernel;
+}
+
 //wstKernel3D create_from_function_3d(double hx, double hy, double hz) {
 //  for (unsigned int i = 0; i < x.size(); i++) {
 //    for (unsigned int j = 0; j < y.size(); j++) {
@@ -732,17 +854,6 @@ template <typename Q> std::vector<wstTensorT<Q> > apply(const wstKernel<Q>& kern
     rf[i] = kernel.apply(vf[i]);
   }
   return rf;
-}
-
-template <typename Q>
-wstMatrixT<Q> matrix_inner(const std::vector< wstTensorT<Q> >& v1, const std::vector< wstTensorT<Q> >& v2) {
-  int sz = v1.size();
-  wstMatrixT<Q> r = zeros(sz, sz);
-  for (int i = 0; i < sz; i++) {
-    for (int j = 0; j < sz; j++) {
-      r(i,j) = inner(v1[i], v2[j]);
-    }
-  }
 }
 
 #endif
