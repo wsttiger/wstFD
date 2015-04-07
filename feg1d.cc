@@ -66,15 +66,15 @@ std::vector<double> klinspace(int npts, double dx) {
   return r;
 }
 
-wstTensorT<std::complex<double> > apply_bsh_1d(const std::vector<double>& x,
+complex_tensor apply_bsh_1d(const std::vector<double>& x,
                         double hx, 
                         double mu,
-                        const wstTensorT<std::complex<double> >& orb) {
+                        const complex_tensor& orb) {
   double mu2 = mu*mu;
   int npts = x.size();
   double dx = x[2]-x[1];
   std::vector<double> kx = klinspace(npts, dx);
-  wstTensorT<std::complex<double> > r = fft(orb);
+  complex_tensor r = fft(orb);
   fftshift(r);
   for (int i = 0; i < npts; i++) {
     r(i) = r(i)/(kx[i]*kx[i] + mu2);
@@ -84,30 +84,30 @@ wstTensorT<std::complex<double> > apply_bsh_1d(const std::vector<double>& x,
 }
 
 
-wstKernel1D<double> build_hamiltonian(const std::vector<double>& x, double hx, int npts) {
-  wstTensorT<double> Vpot;
+double_kernel_1d build_hamiltonian(const std::vector<double>& x, double hx, int npts) {
+  double_tensor Vpot;
   Vpot.create(std::bind(V, L, std::placeholders::_1), x, npts, true);
-  wstKernel1D<double> H = create_laplacian_7p_1d(Vpot, hx, -0.5); 
+  double_kernel_1d H = create_laplacian_7p_1d(Vpot, hx, -0.5); 
   return H;
 }
 
-std::vector<wstTensorT<double> > make_initial_guess(const wstKernel1D<double>& H, int npts0, int norbs, 
+std::vector<double_tensor > make_initial_guess(const double_kernel_1d& H, int npts0, int norbs, 
                                  bool random = false) {
-  std::vector<wstTensorT<double> > orbs;
+  std::vector<double_tensor > orbs;
   for (int i = 0; i < norbs; i++) {
     if (i == 0) {
       if (random) {
-        wstTensorT<double> f = random_function_double(npts0, true);
+        double_tensor f = random_function_double(npts0, true);
         normalize(f);
         orbs.push_back(f);
       }
       else {
-        wstTensorT<double> f = constant_function<double>(npts0, 1.0, true);
+        double_tensor f = constant_function<double>(npts0, 1.0, true);
         normalize(f);
         orbs.push_back(f);
       }
     } else {
-      wstTensorT<double> f = (random) ? random_function_double(npts0, true) : H.apply(orbs[i-1]);
+      double_tensor f = (random) ? random_function_double(npts0, true) : H.apply(orbs[i-1]);
       normalize(f);
       orbs.push_back(f);
     }
@@ -123,9 +123,9 @@ void doit() {
   vector<double> x = wstUtils::linspace(-L/2, L/2, NPTS);
   double hx = std::abs(x[1]-x[0]);
   // make hamiltonian kernel
-  wstKernel1D<double> Hker = build_hamiltonian(x, hx, NPTS);
+  double_kernel_1d Hker = build_hamiltonian(x, hx, NPTS);
   // intial guess
-  std::vector<wstTensorT<double> > orbs = make_initial_guess(Hker, NPTS, norbs, true);
+  std::vector<double_tensor > orbs = make_initial_guess(Hker, NPTS, norbs, true);
   OrbitalCache<double> orbcache(2*norbs);
   orbs = orbcache.append(orbs);
 
@@ -146,14 +146,14 @@ void doit() {
     orbs = transform(orbs,evecs.cols());
     for (int i = 0 ; i < norbs; i++) e[i] = eigs(i);
   
-    std::vector<wstTensorT<double> > new_orbs(norbs);
+    std::vector<double_tensor > new_orbs(norbs);
     // loop over orbitals
     for (int iorb = 0; iorb < norbs; iorb++) {
       double shift = 0.0;
       if (e[iorb] > -1e-4) shift = 0.05 + e[iorb];
       double mu = std::sqrt(-2.0*(e[iorb]-shift));
       //printf("e: %10.5f     shift: %10.5f     t1: %10.5f     mu: %10.5f\n", e[iorb], shift, -2.0*(e[iorb]-shift), mu);
-      wstTensorT<double> vpsi = (V0-shift)*orbs[iorb];
+      double_tensor vpsi = (V0-shift)*orbs[iorb];
       new_orbs[iorb] = -2.0*real(apply_bsh_1d(x, hx, mu, vpsi));
     }
     orbs = orbcache.append(new_orbs);

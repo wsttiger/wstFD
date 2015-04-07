@@ -166,7 +166,7 @@ private:
     T c;
     
     wstStencil2D() : x(0), y(0), c(T(0)) {}
-    wstStencil2D(int x, int y, double c) : x(x), y(y), c(c) {}
+    wstStencil2D(int x, int y, T c) : x(x), y(y), c(c) {}
   };
 
   vector<wstStencil2D> _stencil;
@@ -251,7 +251,7 @@ private:
     T c;
     
     wstStencil3D() : x(0), y(0), z(0), c(0.0) {}
-    wstStencil3D(int x, int y, int z, double c) : x(x), y(y), z(z), c(c) {}
+    wstStencil3D(int x, int y, int z, T c) : x(x), y(y), z(z), c(c) {}
   };
 
   vector<wstStencil3D> _stencil;
@@ -361,7 +361,15 @@ public:
   }
 };
 
-wstKernel1D<double> create_laplacian_3p_1d(double hx, double scale = 1.0) {
+// typedefs
+typedef wstKernel1D<double> double_kernel_1d;
+typedef wstKernel2D<double> double_kernel_2d;
+typedef wstKernel3D<double> double_kernel_3d;
+typedef wstKernel1D<std::complex<double> > complex_kernel_1d;
+typedef wstKernel2D<std::complex<double> > complex_kernel_2d;
+typedef wstKernel3D<std::complex<double> > complex_kernel_3d;
+
+double_kernel_1d create_laplacian_3p_1d(double hx, double scale = 1.0) {
   // Create the 3-point laplacian stencil
   int offsets3p[3] = {-1, 0, 1};
   double coeffs3p[3] = {1.0, -2.0, 1.0};
@@ -373,12 +381,12 @@ wstKernel1D<double> create_laplacian_3p_1d(double hx, double scale = 1.0) {
     vcoeffs3p[i+p] = scale*coeffs3p[i]/hx/hx;
   }
 
-  wstKernel1D<double> kernel;
+  double_kernel_1d kernel;
   kernel.create(xoffset3p, vcoeffs3p);
   return kernel;
 };
 
-wstKernel1D<double> create_laplacian_3p_1d(const wstTensorT<double>& localf, double hx, double scale = 1.0) {
+double_kernel_1d create_laplacian_3p_1d(const wstTensorT<double>& localf, double hx, double scale = 1.0) {
   // Create the 3-point laplacian stencil
   int offsets3p[3] = {-1, 0, 1};
   double coeffs3p[3] = {1.0, -2.0, 1.0};
@@ -390,12 +398,12 @@ wstKernel1D<double> create_laplacian_3p_1d(const wstTensorT<double>& localf, dou
     vcoeffs3p[i+p] = scale*coeffs3p[i]/hx/hx;
   }
 
-  wstKernel1D<double> kernel;
+  double_kernel_1d kernel;
   kernel.create(localf, xoffset3p, vcoeffs3p);
   return kernel;
 };
 
-wstKernel2D<double> create_laplacian_3p_2d(double hx, double hy, double scale = 1.0) {
+double_kernel_2d create_laplacian_3p_2d(double hx, double hy, double scale = 1.0) {
   // Create the 3-point laplacian stencil
   int offsets3p[3] = {-1, 0, 1};
   double coeffs3p[3] = {1.0, -2.0, 1.0};
@@ -413,12 +421,12 @@ wstKernel2D<double> create_laplacian_3p_2d(double hx, double hy, double scale = 
     vcoeffs3p[i+p] = scale*coeffs3p[i]/hy/hy;
   }
   
-  wstKernel2D<double> kernel;
+  double_kernel_2d kernel;
   kernel.create(xoffset3p, yoffset3p, vcoeffs3p);
   return kernel;
 };
 
-wstKernel3D<double> create_laplacian_3p_3d(double hx, double hy, double hz, double scale = 1.0) {
+double_kernel_3d create_laplacian_3p_3d(double hx, double hy, double hz, double scale = 1.0) {
   int offsets3p[3] = {-1, 0, 1};
   double coeffs3p[3] = {1.0, -2.0, 1.0};
   vector<int> xoffset3p(9,0); 
@@ -441,12 +449,12 @@ wstKernel3D<double> create_laplacian_3p_3d(double hx, double hy, double hz, doub
     vcoeffs3p[i+p] = scale*coeffs3p[i]/hz/hz;
   }
 
-  wstKernel3D<double> kernel;
+  double_kernel_3d kernel;
   kernel.create(xoffset3p, yoffset3p, zoffset3p, vcoeffs3p);
   return kernel;
 }
 
-wstKernel1D<double> create_laplacian_5p_1d(double hx, double scale = 1.0) {
+double_kernel_1d create_laplacian_5p_1d(double hx, double scale = 1.0) {
   int offsets5p[5] = {-2, -1, 0, 1, 2};
   double coeffs5p[5] = {-1.0/12.0, 16.0/12.0, -30.0/12.0, 16.0/12.0, -1.0/12.0};
   vector<int> xoffset5p(5,0); 
@@ -457,12 +465,12 @@ wstKernel1D<double> create_laplacian_5p_1d(double hx, double scale = 1.0) {
     vcoeffs5p[i+p] = scale*coeffs5p[i]/hx/hx;
   }
 
-  wstKernel1D<double> kernel;
+  double_kernel_1d kernel;
   kernel.create(xoffset5p, vcoeffs5p);
   return kernel;
 }
 
-wstKernel1D<double> create_laplacian_5p_1d(const wstTensorT<double>& localf, double hx, double scale = 1.0) {
+double_kernel_1d create_laplacian_5p_1d(const wstTensorT<double>& localf, double hx, double scale = 1.0) {
   int offsets5p[5] = {-2, -1, 0, 1, 2};
   double coeffs5p[5] = {-1.0/12.0, 16.0/12.0, -30.0/12.0, 16.0/12.0, -1.0/12.0};
   vector<int> xoffset5p(5,0); 
@@ -473,12 +481,12 @@ wstKernel1D<double> create_laplacian_5p_1d(const wstTensorT<double>& localf, dou
     vcoeffs5p[i+p] = scale*coeffs5p[i]/hx/hx;
   }
 
-  wstKernel1D<double> kernel;
+  double_kernel_1d kernel;
   kernel.create(localf, xoffset5p, vcoeffs5p);
   return kernel;
 }
 
-wstKernel2D<double> create_laplacian_5p_2d(double hx, double hy, double scale = 1.0) {
+double_kernel_2d create_laplacian_5p_2d(double hx, double hy, double scale = 1.0) {
   int offsets5p[5] = {-2, -1, 0, 1, 2};
   double coeffs5p[5] = {-1.0/12.0, 16.0/12.0, -30.0/12.0, 16.0/12.0, -1.0/12.0};
   vector<int> xoffset5p(10,0); 
@@ -495,12 +503,12 @@ wstKernel2D<double> create_laplacian_5p_2d(double hx, double hy, double scale = 
     vcoeffs5p[i+p] = scale*coeffs5p[i]/hy/hy;
   }
 
-  wstKernel2D<double> kernel;
+  double_kernel_2d kernel;
   kernel.create(xoffset5p, yoffset5p, vcoeffs5p);
   return kernel;
 }
 
-wstKernel3D<double> create_laplacian_5p_3d(double hx, double hy, double hz, double scale = 1.0) {
+double_kernel_3d create_laplacian_5p_3d(double hx, double hy, double hz, double scale = 1.0) {
   // Create the 5-point laplacian stencil
   int offsets5p[5] = {-2, -1, 0, 1, 2};
   double coeffs5p[5] = {-1.0/12.0, 16.0/12.0, -30.0/12.0, 16.0/12.0, -1.0/12.0};
@@ -524,12 +532,12 @@ wstKernel3D<double> create_laplacian_5p_3d(double hx, double hy, double hz, doub
     vcoeffs5p[i+p] = scale*coeffs5p[i]/hz/hz;
   }
 
-  wstKernel3D<double> kernel;
+  double_kernel_3d kernel;
   kernel.create(xoffset5p, yoffset5p, zoffset5p, vcoeffs5p);
   return kernel;
 }
 
-wstKernel1D<double> create_laplacian_7p_1d(const wstTensorT<double>& localf, double hx, double scale = 1.0) {
+double_kernel_1d create_laplacian_7p_1d(const wstTensorT<double>& localf, double hx, double scale = 1.0) {
   int offsets7p[7] = {-3, -2, -1, 0, 1, 2, 3};
   double coeffs7p[7] = {2.0/180.0, -27.0/180.0, 270.0/180.0, -490.0/180.0, 270.0/180.0, -27.0/180.0, 2.0/180.0};
   vector<int> xoffset7p(7,0); 
@@ -540,12 +548,12 @@ wstKernel1D<double> create_laplacian_7p_1d(const wstTensorT<double>& localf, dou
     vcoeffs7p[i+p] = scale*coeffs7p[i]/hx/hx;
   }
 
-  wstKernel1D<double> kernel;
+  double_kernel_1d kernel;
   kernel.create(localf, xoffset7p, vcoeffs7p);
   return kernel;
 }
 
-wstKernel1D<double> create_laplacian_7p_1d(double hx, double scale = 1.0) {
+double_kernel_1d create_laplacian_7p_1d(double hx, double scale = 1.0) {
   int offsets7p[7] = {-3, -2, -1, 0, 1, 2, 3};
   double coeffs7p[7] = {2.0/180.0, -27.0/180.0, 270.0/180.0, -490.0/180.0, 270.0/180.0, -27.0/180.0, 2.0/180.0};
   vector<int> xoffset7p(7,0); 
@@ -556,12 +564,12 @@ wstKernel1D<double> create_laplacian_7p_1d(double hx, double scale = 1.0) {
     vcoeffs7p[i+p] = scale*coeffs7p[i]/hx/hx;
   }
 
-  wstKernel1D<double> kernel;
+  double_kernel_1d kernel;
   kernel.create(xoffset7p, vcoeffs7p);
   return kernel;
 }
 
-wstKernel2D<double> create_laplacian_7p_2d(double hx, double hy, double scale = 1.0) {
+double_kernel_2d create_laplacian_7p_2d(double hx, double hy, double scale = 1.0) {
   int offsets7p[7] = {-3, -2, -1, 0, 1, 2, 3};
   double coeffs7p[7] = {2.0/180.0, -27.0/180.0, 270.0/180.0, -490.0/180.0, 270.0/180.0, -27.0/180.0, 2.0/180.0};
   vector<int> xoffset7p(21,0); 
@@ -578,12 +586,12 @@ wstKernel2D<double> create_laplacian_7p_2d(double hx, double hy, double scale = 
     vcoeffs7p[i+p] = scale*coeffs7p[i]/hy/hy;
   }
 
-  wstKernel2D<double> kernel;
+  double_kernel_2d kernel;
   kernel.create(xoffset7p, yoffset7p, vcoeffs7p);
   return kernel;
 }
 
-wstKernel3D<double> create_laplacian_7p_3d(const wstTensorT<double>& localf, double hx, double hy, double hz, double scale = 1.0) {
+double_kernel_3d create_laplacian_7p_3d(const wstTensorT<double>& localf, double hx, double hy, double hz, double scale = 1.0) {
   int offsets7p[7] = {-3, -2, -1, 0, 1, 2, 3};
   double coeffs7p[7] = {2.0/180.0, -27.0/180.0, 270.0/180.0, -490.0/180.0, 270.0/180.0, -27.0/180.0, 2.0/180.0};
   vector<int> xoffset7p(21,0); 
@@ -606,12 +614,12 @@ wstKernel3D<double> create_laplacian_7p_3d(const wstTensorT<double>& localf, dou
     vcoeffs7p[i+p] = scale*coeffs7p[i]/hz/hz;
   }
 
-  wstKernel3D<double> kernel;
+  double_kernel_3d kernel;
   kernel.create(localf, xoffset7p, yoffset7p, zoffset7p, vcoeffs7p);
   return kernel;
 }
 
-wstKernel3D<double> create_laplacian_7p_3d(double hx, double hy, double hz, double scale = 1.0) {
+double_kernel_3d create_laplacian_7p_3d(double hx, double hy, double hz, double scale = 1.0) {
   int offsets7p[7] = {-3, -2, -1, 0, 1, 2, 3};
   double coeffs7p[7] = {2.0/180.0, -27.0/180.0, 270.0/180.0, -490.0/180.0, 270.0/180.0, -27.0/180.0, 2.0/180.0};
   vector<int> xoffset7p(21,0); 
@@ -634,14 +642,14 @@ wstKernel3D<double> create_laplacian_7p_3d(double hx, double hy, double hz, doub
     vcoeffs7p[i+p] = scale*coeffs7p[i]/hz/hz;
   }
 
-  wstKernel3D<double> kernel;
+  double_kernel_3d kernel;
   kernel.create(xoffset7p, yoffset7p, zoffset7p, vcoeffs7p);
   return kernel;
 }
 
-wstKernel1D<std::complex<double> > create_Dx_7p_1d(double hx, double kx, const std::complex<double>& scale) {
+complex_kernel_1d create_Dx_7p_1d(double hx, const std::complex<double>& scale) {
   int offsets7p[7] = {-3, -2, -1, 0, 1, 2, 3};
-  double coeffs7p[7] = {1.0/60.0, -9.0/60.0, 45.0/60.0, 0.0, 45.0/60.0, -9.0/60.0, 1.0/60.0};
+  double coeffs7p[7] = {-1.0/60.0, 9.0/60.0, -45.0/60.0, 0.0, 45.0/60.0, -9.0/60.0, 1.0/60.0};
   vector<int> xoffset7p(7,0); 
   vector<std::complex<double> > vcoeffs7p(7,0.0);
   int p = 0;
@@ -650,8 +658,58 @@ wstKernel1D<std::complex<double> > create_Dx_7p_1d(double hx, double kx, const s
     vcoeffs7p[i+p] = scale*coeffs7p[i]/hx;
   }
 
-  wstKernel1D<std::complex<double> > kernel;
+  complex_kernel_1d kernel;
   kernel.create(xoffset7p, vcoeffs7p);
+  return kernel;
+}
+
+complex_kernel_2d create_Dx_7p_2d(double hx, double hy, const std::complex<double>& scale) {
+  int offsets7p[7] = {-3, -2, -1, 0, 1, 2, 3};
+  double coeffs7p[7] = {1.0/60.0, -9.0/60.0, 45.0/60.0, 0.0, 45.0/60.0, -9.0/60.0, 1.0/60.0};
+  vector<int> xoffset7p(14,0); 
+  vector<int> yoffset7p(14,0); 
+  vector<std::complex<double> > vcoeffs7p(7,0.0);
+  int p = 0;
+  for (int i = 0; i < 7; i++) {
+    xoffset7p[i+p] = offsets7p[i];   
+    vcoeffs7p[i+p] = scale*coeffs7p[i]/hx;
+  }
+  p += 7;
+  for (int i = 0; i < 7; i++) {
+    yoffset7p[i+p] = offsets7p[i];   
+    vcoeffs7p[i+p] = scale*coeffs7p[i]/hy;
+  }
+
+  complex_kernel_2d kernel;
+  kernel.create(xoffset7p, yoffset7p, vcoeffs7p);
+  return kernel;
+}
+
+complex_kernel_3d create_Dx_7p_3d(double hx, double hy, double hz, const std::complex<double>& scale) {
+  int offsets7p[7] = {-3, -2, -1, 0, 1, 2, 3};
+  double coeffs7p[7] = {1.0/60.0, -9.0/60.0, 45.0/60.0, 0.0, 45.0/60.0, -9.0/60.0, 1.0/60.0};
+  vector<int> xoffset7p(21,0); 
+  vector<int> yoffset7p(21,0); 
+  vector<int> zoffset7p(21,0); 
+  vector<std::complex<double> > vcoeffs7p(7,0.0);
+  int p = 0;
+  for (int i = 0; i < 7; i++) {
+    xoffset7p[i+p] = offsets7p[i];   
+    vcoeffs7p[i+p] = scale*coeffs7p[i]/hx;
+  }
+  p += 7;
+  for (int i = 0; i < 7; i++) {
+    yoffset7p[i+p] = offsets7p[i];   
+    vcoeffs7p[i+p] = scale*coeffs7p[i]/hy;
+  }
+  p += 7;
+  for (int i = 0; i < 7; i++) {
+    zoffset7p[i+p] = offsets7p[i];   
+    vcoeffs7p[i+p] = scale*coeffs7p[i]/hz;
+  }
+
+  complex_kernel_3d kernel;
+  kernel.create(xoffset7p, yoffset7p, zoffset7p, vcoeffs7p);
   return kernel;
 }
 

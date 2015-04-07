@@ -368,6 +368,13 @@ wstTensorT<Q> operator*(const Q& s, const wstTensorT<Q>& A) {
 }
 
 template <typename Q>
+wstTensorT<std::complex<Q> > operator*(const Q& s, const wstTensorT<std::complex<Q> >& A) {
+  wstTensorT<std::complex<Q> > r = copy(A);
+  r.scale(std::complex<Q>(s));
+  return r;
+}
+
+template <typename Q>
 wstTensorT<Q> gaxpy(const Q& a, const wstTensorT<Q>& T1, const Q& b, const wstTensorT<Q>& T2) {
   return T1.gaxpy_oop(a, T2, b);
 }
@@ -759,11 +766,16 @@ complex_tensor fft(const complex_tensor& t) {
     assert(false);
   }
   // do dreadful copy (for now) 
-  for (int i = 0; i < t.size(); i++) ptr[i] = R[i];
+  for (int i = 0; i < t.size(); i++) {
+    ptr[i] = R[i];
+  } 
   fftw_execute(plan); 
   // do another dreadful copy (for now) 
-  for (int i = 0; i < t.size(); i++) R[i] = ptr[i];
+  for (int i = 0; i < t.size(); i++) {
+    R[i] = ptr[i];
+  }
   fftw_destroy_plan(plan);
+  delete [] ptr;
   return R;
 }
 
@@ -791,7 +803,8 @@ complex_tensor ifft(const complex_tensor& t) {
   for (int i = 0; i < t.size(); i++) ptr[i] = R[i];
   fftw_execute(plan); 
   // do another dreadful copy (for now) 
-  for (int i = 0; i < t.size(); i++) R[i] = ptr[i];
+  double scale = 1.0/t.dim(0);
+  for (int i = 0; i < t.size(); i++) R[i] = scale*ptr[i];
   fftw_destroy_plan(plan);
   return R;
 }

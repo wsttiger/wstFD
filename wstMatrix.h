@@ -322,6 +322,24 @@ public:
   }
 };
 
+// typedefs
+typedef wstMatrixT<double> double_matrix;
+typedef wstMatrixT<std::complex<double> > complex_matrix;
+
+template <typename Q>
+Q sum(const wstMatrixT<Q>& A) {
+  Q s = Q(0);
+  for (int i = 0; i < A.size(); i++) s += A[i];
+  return s;
+}
+
+template <typename Q>
+Q product(const wstMatrixT<Q>& A) {
+  Q s = Q(1);
+  for (int i = 0; i < A.size(); i++) s *= A[i];
+  return s;
+}
+
 template <typename Q>
 wstMatrixT<Q> gaxpy(const Q& a, const wstMatrixT<Q>& T1, const Q& b, const wstMatrixT<Q>& T2) {
   return T1.gaxpy_oop(a, T2, b);
@@ -332,15 +350,15 @@ double inner(const wstMatrixT<Q>& t1, const wstMatrixT<Q>& t2) {
   return t1.inner(t2);
 }
 
-double norm2(const wstMatrixT<double>& t) {
+double norm2(const double_matrix& t) {
   return t.norm2();
 }
 
-double norm2(const wstMatrixT<std::complex<double> >& t) {
+double norm2(const complex_matrix& t) {
   return std::abs(t.norm2());
 }
 
-void print(const wstMatrixT<double>& A) {
+void print(const double_matrix& A) {
   int nr = A.nrows();
   int nc = A.ncols();
   for (int i = 0; i < nr; i++) {
@@ -353,7 +371,7 @@ void print(const wstMatrixT<double>& A) {
   printf("\n");
 }
 
-void print(const wstMatrixT<std::complex<double> >& A) {
+void print(const complex_matrix& A) {
   int nr = A.nrows();
   int nc = A.ncols();
   for (int i = 0; i < nr; i++) {
@@ -453,14 +471,14 @@ wstMatrixT<Q> transpose(const wstMatrixT<Q> A) {
   return r;
 }
 
-wstMatrixT<double> ctranspose(const wstMatrixT<double> A) {
+double_matrix ctranspose(const double_matrix A) {
   return transpose(A);
 }
 
-wstMatrixT<std::complex<double> > ctranspose(const wstMatrixT<std::complex<double> > A) {
+complex_matrix ctranspose(const complex_matrix A) {
   int nr = A.nrows();
   int nc = A.ncols();
-  wstMatrixT<std::complex<double> > r = zeros<std::complex<double> >(nc, nr);
+  complex_matrix r = zeros<std::complex<double> >(nc, nr);
   for (int i = 0; i < nr; i++) {
     for (int j = 0; j < nc; j++) {
       r(j, i) = std::conj(A(i, j));
@@ -487,7 +505,7 @@ wstMatrixT<std::complex<Q> > make_complex(const wstMatrixT<Q>& rp, const wstMatr
 }
 
 // For a symmetric real matrix
-std::pair< wstMatrixT<double>, wstMatrixT<double> > diag(const wstMatrixT<double>& mat) {
+std::pair< double_matrix, double_matrix > diag(const double_matrix& mat) {
   assert(mat.nrows() == mat.ncols());
   int n = mat.nrows();
   char jobz = 'V';
@@ -496,8 +514,8 @@ std::pair< wstMatrixT<double>, wstMatrixT<double> > diag(const wstMatrixT<double
   int lda = n;
   int lwork = 3*n-1;
   double *work = new double[lwork];
-  wstMatrixT<double> ev = copy(mat, false);
-  wstMatrixT<double> e = zeros<double>(n,1);
+  double_matrix ev = copy(mat, false);
+  double_matrix e = zeros<double>(n,1);
   double* evptr = ev.ptr();
   double* eptr = e.ptr();
 
@@ -508,11 +526,11 @@ std::pair< wstMatrixT<double>, wstMatrixT<double> > diag(const wstMatrixT<double
   }
   delete work;
 
-  return std::pair< wstMatrixT<double>, wstMatrixT<double> >(transpose(e), transpose(ev));
+  return std::pair< double_matrix, double_matrix >(transpose(e), transpose(ev));
 }
 
 // For a hermitian complex matrix
-std::pair< wstMatrixT<double>, wstMatrixT<std::complex<double> > > diag(const wstMatrixT<std::complex<double> >& mat) {
+std::pair< double_matrix, complex_matrix > diag(const complex_matrix& mat) {
   assert(mat.nrows() == mat.ncols());
   int n = mat.nrows();
   char jobz = 'V';
@@ -522,12 +540,10 @@ std::pair< wstMatrixT<double>, wstMatrixT<std::complex<double> > > diag(const ws
   int lwork = 3*n-1;
   std::complex<double>* work = new std::complex<double>[lwork];
   double* rwork = new double[3*n-2];
-  wstMatrixT<std::complex<double> > ev = copy(mat, false);
-  wstMatrixT<double> e = zeros<double>(n,1);
+  complex_matrix ev = copy(mat, false);
+  double_matrix e = zeros<double>(n,1);
   std::complex<double>* evptr = ev.ptr();
   double* eptr = e.ptr();
-
-  //for (int i = 0; i < n*n; i++) printf("%15.8f\n", evptr[i]);
 
   zheev_(&jobz, &uplo, &n, evptr, &lda, eptr, work, &lwork, rwork, &info);
 
@@ -537,7 +553,13 @@ std::pair< wstMatrixT<double>, wstMatrixT<std::complex<double> > > diag(const ws
   delete work;
   delete rwork;
 
-  return std::pair< wstMatrixT<double>, wstMatrixT<std::complex<double> > >(transpose(e), transpose(ev));
+  return std::pair< double_matrix, complex_matrix >(transpose(e), transpose(ev));
+}
+
+template <typename Q>
+double det(const wstMatrixT<Q>& A) {
+  auto result = diag(A);
+  return product(result.first);
 }
 
 #endif
