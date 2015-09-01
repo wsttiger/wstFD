@@ -18,11 +18,15 @@ extern "C" void zheev_(char *jobz, char *uplo, int *n, std::complex<double> *a,
            int *lda, double *w, std::complex<double> *work, int *lwork,
            double *rwork, int *info);
 
-struct wstMatrixSlice {
-  wstMatrixSlice(int i0, int i1, int j0, int j1) 
+extern "C" void zhegv_(int *itype, char *jobz, char *uplo, int *n, std::complex<double> *a,
+           int *lda, std::complex<double> *b, int *ldb, double *w, std::complex<double> *work, int *lwork,
+           double *rwork, int *info);
+
+struct wstSlice {
+  wstSlice(int i0, int i1, int j0, int j1) 
    : i0(i0), i1(i1), j0(j0), j1(j1), ndim(2) {}
   
-  wstMatrixSlice(int i0, int i1) 
+  wstSlice(int i0, int i1) 
    : i0(i0), i1(i1), j0(0), j1(0), ndim(1) {}
 
   // size of first dimension
@@ -37,6 +41,11 @@ struct wstMatrixSlice {
 
   int i0, i1, j0, j1, ndim;
 };
+
+void print(const wstSlice& sl) {
+  if (sl.ndim == 1) printf("wstSlice: i0 = %d  i1 = %d\n", sl.i0, sl.i1);
+  if (sl.ndim == 2) printf("wstSlice: i0 = %d  i1 = %d  j0 = %d  j1 = %d\n", sl.i0, sl.i1, sl.j0, sl.j1);
+}
 
 template <typename T>
 class wstMatrixT {
@@ -268,7 +277,7 @@ public:
   }
 
   // simple slicing
-  wstMatrixT<T> operator()(const wstMatrixSlice& sl) {
+  wstMatrixT<T> operator()(const wstSlice& sl) {
     wstMatrixT<T> R;
     R.create(sl.n0(),sl.n1());
     T* p = ptr(sl.i0, sl.j0);
@@ -301,7 +310,7 @@ public:
   }
 
   // extract a contiguous group of column vectors from matrix
-  std::vector<wstMatrixT<T> > cols(const wstMatrixSlice& sl) {
+  std::vector<wstMatrixT<T> > cols(const wstSlice& sl) {
     assert(sl.ndim == 1);
     int nc = sl.n0();
     std::vector<wstMatrixT<T> > R(nc);
@@ -323,8 +332,10 @@ public:
 };
 
 // typedefs
-typedef wstMatrixT<double> double_matrix;
+typedef wstMatrixT<double> real_matrix;
 typedef wstMatrixT<std::complex<double> > complex_matrix;
+typedef std::pair<real_matrix, real_matrix> eigResultRT;
+typedef std::pair<real_matrix, complex_matrix> eigResultCT;
 
 template <typename Q>
 Q sum(const wstMatrixT<Q>& A) {
@@ -350,7 +361,7 @@ double inner(const wstMatrixT<Q>& t1, const wstMatrixT<Q>& t2) {
   return t1.inner(t2);
 }
 
-double norm2(const double_matrix& t) {
+double norm2(const real_matrix& t) {
   return t.norm2();
 }
 
@@ -358,7 +369,7 @@ double norm2(const complex_matrix& t) {
   return std::abs(t.norm2());
 }
 
-void print(const double_matrix& A) {
+void print(const real_matrix& A) {
   int nr = A.nrows();
   int nc = A.ncols();
   for (int i = 0; i < nr; i++) {
@@ -458,6 +469,30 @@ wstMatrixT<Q> abs(const wstMatrixT<std::complex<Q> > Ac) {
   return Ar;
 }
 
+real_matrix real(const real_matrix& A) {
+  real_matrix Ar;
+  Ar.create(A.nrows(), A.ncols()); 
+  int sz = Ar.size();
+  for (int i = 0; i < sz; i++) Ar(i) = A(i);
+  return Ar;
+}
+
+real_matrix imag(const real_matrix& A) {
+  real_matrix Ar;
+  Ar.create(A.nrows(), A.ncols()); 
+  int sz = Ar.size();
+  for (int i = 0; i < sz; i++) Ar(i) = 0.0;
+  return Ar;
+}
+
+real_matrix abs(const real_matrix& A) {
+  real_matrix Ar;
+  Ar.create(A.nrows(), A.ncols()); 
+  int sz = Ar.size();
+  for (int i = 0; i < sz; i++) Ar(i) = std::abs(A(i));
+  return Ar;
+}
+
 template <typename Q>
 wstMatrixT<Q> transpose(const wstMatrixT<Q> A) {
   int nr = A.nrows();
@@ -471,7 +506,7 @@ wstMatrixT<Q> transpose(const wstMatrixT<Q> A) {
   return r;
 }
 
-double_matrix ctranspose(const double_matrix A) {
+real_matrix ctranspose(const real_matrix A) {
   return transpose(A);
 }
 
@@ -505,7 +540,7 @@ wstMatrixT<std::complex<Q> > make_complex(const wstMatrixT<Q>& rp, const wstMatr
 }
 
 // For a symmetric real matrix
-std::pair< double_matrix, double_matrix > diag(const double_matrix& mat) {
+eigResultRT diag(const real_matrix& mat) {
   assert(mat.nrows() == mat.ncols());
   int n = mat.nrows();
   char jobz = 'V';
@@ -514,8 +549,8 @@ std::pair< double_matrix, double_matrix > diag(const double_matrix& mat) {
   int lda = n;
   int lwork = 3*n-1;
   double *work = new double[lwork];
-  double_matrix ev = copy(mat, false);
-  double_matrix e = zeros<double>(n,1);
+  real_matrix ev = copy(mat, false);
+  real_matrix e = zeros<double>(n,1);
   double* evptr = ev.ptr();
   double* eptr = e.ptr();
 
@@ -523,14 +558,15 @@ std::pair< double_matrix, double_matrix > diag(const double_matrix& mat) {
 
   if (info != 0) {
     printf("[[Error:]] lapack::dsyev failed --- info = %d\n\n", info);
+    exit(1);
   }
   delete work;
 
-  return std::pair< double_matrix, double_matrix >(transpose(e), transpose(ev));
+  return std::pair< real_matrix, real_matrix >(transpose(e), transpose(ev));
 }
 
 // For a hermitian complex matrix
-std::pair< double_matrix, complex_matrix > diag(const complex_matrix& mat) {
+eigResultCT diag(const complex_matrix& mat) {
   assert(mat.nrows() == mat.ncols());
   int n = mat.nrows();
   char jobz = 'V';
@@ -541,19 +577,52 @@ std::pair< double_matrix, complex_matrix > diag(const complex_matrix& mat) {
   std::complex<double>* work = new std::complex<double>[lwork];
   double* rwork = new double[3*n-2];
   complex_matrix ev = copy(mat, false);
-  double_matrix e = zeros<double>(n,1);
+  real_matrix e = zeros<double>(n,1);
   std::complex<double>* evptr = ev.ptr();
   double* eptr = e.ptr();
 
   zheev_(&jobz, &uplo, &n, evptr, &lda, eptr, work, &lwork, rwork, &info);
 
   if (info != 0) {
-    printf("[[Error:]] lapack::dsyev failed --- info = %d\n\n", info);
+    printf("[[Error:]] lapack::zheev failed --- info = %d\n\n", info);
+    exit(1);
   }
   delete work;
   delete rwork;
 
-  return std::pair< double_matrix, complex_matrix >(transpose(e), transpose(ev));
+  return std::pair< real_matrix, complex_matrix >(transpose(e), transpose(ev));
+}
+
+// For a hermitian complex matrix
+eigResultCT diag(const complex_matrix& mat, complex_matrix& omat) {
+  assert(mat.nrows() == mat.ncols());
+  assert(omat.nrows() == omat.ncols());
+  assert(mat.nrows() == omat.nrows());
+  int n = mat.nrows();
+  char jobz = 'V';
+  char uplo = 'U';
+  int info;
+  int lda = n;
+  int lwork = 3*n-1;
+  int itype = 1;
+  std::complex<double>* work = new std::complex<double>[lwork];
+  double* rwork = new double[3*n-2];
+  complex_matrix ev = copy(mat, false);
+  real_matrix e = zeros<double>(n,1);
+  std::complex<double>* evptr = ev.ptr();
+  std::complex<double>* optr = omat.ptr();
+  double* eptr = e.ptr();
+
+  zhegv_(&itype, &jobz, &uplo, &n, evptr, &n, optr, &n, eptr, work, &lwork, rwork, &info);
+
+  if (info != 0) {
+    printf("[[Error:]] lapack::zhegv failed --- info = %d\n\n", info);
+    exit(1);
+  }
+  delete [] work;
+  delete [] rwork;
+
+  return std::pair< real_matrix, complex_matrix >(transpose(e), transpose(ev));
 }
 
 template <typename Q>

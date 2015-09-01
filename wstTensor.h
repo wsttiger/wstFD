@@ -319,6 +319,14 @@ public:
     return gaxpy_oop(1.0, t, -1.0);
   }
  
+  void operator+=(const wstTensorT& t) {
+    gaxpy(1.0,t,1.0);
+  }
+
+  void operator-=(const wstTensorT& t) {
+    gaxpy(1.0,t,-1.0);
+  }
+
   void scale(T a) {
     int sz = this->size();
     for (int i = 0; i < sz; i++) _p[i] *= a;
@@ -357,7 +365,7 @@ public:
 };
 
 // typedefs
-typedef wstTensorT<double> double_tensor;
+typedef wstTensorT<double> real_tensor;
 typedef wstTensorT<std::complex<double> > complex_tensor;
 
 template <typename Q>
@@ -389,7 +397,7 @@ std::complex<double> inner(const complex_tensor& t1, const complex_tensor& t2) {
   return r;
 }
 
-std::complex<double> inner(const double_tensor& t1, const complex_tensor& t2) {
+std::complex<double> inner(const real_tensor& t1, const complex_tensor& t2) {
   std::complex<double> r = 0.0;
   assert(t1.size() == t2.size());
   int sz = t1.size();
@@ -399,7 +407,7 @@ std::complex<double> inner(const double_tensor& t1, const complex_tensor& t2) {
   return r;
 }
 
-std::complex<double> inner(const complex_tensor& t1, const double_tensor& t2) {
+std::complex<double> inner(const complex_tensor& t1, const real_tensor& t2) {
   std::complex<double> r = 0.0;
   assert(t1.size() == t2.size());
   int sz = t1.size();
@@ -409,7 +417,7 @@ std::complex<double> inner(const complex_tensor& t1, const double_tensor& t2) {
   return r;
 }
 
-double inner(const double_tensor& t1, const double_tensor& t2) {
+double inner(const real_tensor& t1, const real_tensor& t2) {
   double r = 0.0;
   assert(t1.size() == t2.size());
   int sz = t1.size();
@@ -509,9 +517,9 @@ wstMatrixT<Q> outer(const std::vector<wstTensorT<Q> >& v1, const std::vector<wst
   return S;
 }
 
-// create a random 1-D function (obviously cannot be periodic)
-double_tensor random_function_double(int d0, bool periodic0 = false) {
-  double_tensor r;
+// create a random 1-D function 
+real_tensor random_function_double(int d0, bool periodic0 = false) {
+  real_tensor r;
   r.create(d0, periodic0);
   int sz = d0;
   double* p = r.ptr();
@@ -523,9 +531,9 @@ double_tensor random_function_double(int d0, bool periodic0 = false) {
   return r;
 }
 
-// create a random 2-D function (obviously cannot be periodic)
-double_tensor random_function_double(int d0, int d1, bool periodic0 = false, bool periodic1 = false) {
-  double_tensor r;
+// create a random 2-D function 
+real_tensor random_function_double(int d0, int d1, bool periodic0 = false, bool periodic1 = false) {
+  real_tensor r;
   r.create(d0, periodic0, periodic1);
   int sz = d0*d1;
   double* p = r.ptr();
@@ -537,9 +545,9 @@ double_tensor random_function_double(int d0, int d1, bool periodic0 = false, boo
   return r;
 }
 
-// create a random 3-D function (obviously cannot be periodic)
-double_tensor random_function_double(int d0, int d1, int d2, bool periodic0 = false, bool periodic1 = false, bool periodic2 = false) {
-  double_tensor r;
+// create a random 3-D function 
+real_tensor random_function_double(int d0, int d1, int d2, bool periodic0 = false, bool periodic1 = false, bool periodic2 = false) {
+  real_tensor r;
   r.create(d0, d1, d2, periodic0, periodic1, periodic2);
   int sz = d0*d1*d2;
   double* p = r.ptr();
@@ -550,6 +558,43 @@ double_tensor random_function_double(int d0, int d1, int d2, bool periodic0 = fa
   }
   return r;
 }
+
+// create a linear 1-D function 
+real_tensor linear_function_double(int d0, bool periodic0 = false) {
+  real_tensor r;
+  r.create(d0, periodic0);
+  int sz = d0;
+  double* p = r.ptr();
+  for (int i = 0; i < sz; i++) {
+    p[i] = (double) i;
+  }
+  return r;
+}
+
+// create a linear 2-D function 
+real_tensor linear_function_double(int d0, int d1, bool periodic0 = false, bool periodic1 = false) {
+  real_tensor r;
+  r.create(d0, periodic0, periodic1);
+  int sz = d0*d1;
+  double* p = r.ptr();
+  for (int i = 0; i < sz; i++) {
+    p[i] = (double) i;
+  }
+  return r;
+}
+
+// create a linear 3-D function 
+real_tensor linear_function_double(int d0, int d1, int d2, bool periodic0 = false, bool periodic1 = false, bool periodic2 = false) {
+  real_tensor r;
+  r.create(d0, d1, d2, periodic0, periodic1, periodic2);
+  int sz = d0*d1*d2;
+  double* p = r.ptr();
+  for (int i = 0; i < sz; i++) {
+    p[i] = (double) i;
+  }
+  return r;
+}
+
 
 template <typename Q>
 wstMatrixT<Q> matrix_inner(const std::vector<wstTensorT<Q> >& v1, const std::vector<wstTensorT<Q> >& v2) {
@@ -653,7 +698,7 @@ void fftshift(wstTensorT<Q>& t) {
   }
 }
 
-void print(const double_tensor& t1) {
+void print(const real_tensor& t1) {
   int sz1 = t1.size();
   printf("# dims:  %d\n", t1.ndim());
   for (unsigned int i = 0; i < t1.ndim(); i++) {
@@ -663,7 +708,7 @@ void print(const double_tensor& t1) {
     printf("%15.10f   \n", t1[i]);
 }
 
-void print2d(const double_tensor& t1) {
+void print2d(const real_tensor& t1) {
   assert(t1.ndim() == 2);
   printf("Dims (%d, %d)\n", t1.dim(0), t1.dim(1));
   for (unsigned int i = 0; i < t1.dim(0); i++) {
@@ -674,7 +719,7 @@ void print2d(const double_tensor& t1) {
   }
 }
 
-void print3d(const double_tensor& t1) {
+void print3d(const real_tensor& t1) {
   assert(t1.ndim() == 3);
   printf("Dims (%d, %d, %d)\n", t1.dim(0), t1.dim(1), t1.dim(2));
   for (unsigned int i = 0; i < t1.dim(0); i++) {
@@ -688,9 +733,8 @@ void print3d(const double_tensor& t1) {
     printf("\n");
   }
 }
-void print(const double_tensor& t1, const double_tensor& t2) {
+void print(const real_tensor& t1, const real_tensor& t2) {
   int sz1 = t1.size(); 
-  printf("# dims:  %d\n", t1.ndim());
   for (unsigned int i = 0; i < t1.ndim(); i++) {
       printf("%d     %d\n", t1.dim(i), t2.dim(i)); 
   }
@@ -698,9 +742,8 @@ void print(const double_tensor& t1, const double_tensor& t2) {
     printf("%15.10f     %15.10f\n", t1[i], t2[i]);
 }
 
-void print(const double_tensor& t1, const double_tensor& t2, const double_tensor& t3) {
+void print(const real_tensor& t1, const real_tensor& t2, const real_tensor& t3) {
   int sz1 = t1.size(); 
-  printf("# dims:  %d\n", t1.ndim());
   for (unsigned int i = 0; i < t1.ndim(); i++) {
       printf("%d     %d     %d\n", t1.dim(i), t2.dim(i), t3.dim(i)); 
   }
@@ -708,14 +751,46 @@ void print(const double_tensor& t1, const double_tensor& t2, const double_tensor
     printf("%15.10f     %15.10f     %15.10f\n", t1[i], t2[i], t3[i]);
 }
 
-void print(const double_tensor& t1, const double_tensor& t2, const double_tensor& t3, const double_tensor& t4) {
+void print(const real_tensor& t1, const real_tensor& t2, const real_tensor& t3, const real_tensor& t4) {
   int sz1 = t1.size(); 
-  printf("# dims:  %d\n", t1.ndim());
   for (unsigned int i = 0; i < t1.ndim(); i++) {
       printf("%d     %d     %d     %d\n", t1.dim(i), t2.dim(i), t3.dim(i), t4.dim(i)); 
   }
   for (int i = 0; i < sz1; i++)
     printf("%15.10f     %15.10f     %15.10f     %15.10f\n", t1[i], t2[i], t3[i], t4[i]);
+}
+
+void print(const real_tensor& t1, const real_tensor& t2, const real_tensor& t3, const real_tensor& t4,
+           const real_tensor& t5) {
+  int sz1 = t1.size(); 
+  for (unsigned int i = 0; i < t1.ndim(); i++) {
+      printf("%d     %d     %d     %d\n     %d\n", t1.dim(i), t2.dim(i), t3.dim(i), t4.dim(i), t5.dim(i)); 
+  }
+  for (int i = 0; i < sz1; i++)
+    printf("%15.10f     %15.10f     %15.10f     %15.10f     %15.10f\n", t1[i], t2[i], t3[i], t4[i], t5[i]);
+}
+
+void print(const real_tensor& t1, const real_tensor& t2, const real_tensor& t3, const real_tensor& t4,
+           const real_tensor& t5, const real_tensor& t6) {
+  int sz1 = t1.size(); 
+  for (unsigned int i = 0; i < t1.ndim(); i++) {
+      printf("%d     %d     %d     %d\n     %d     %d\n", t1.dim(i), t2.dim(i), t3.dim(i), t4.dim(i), 
+          t5.dim(i), t6.dim(i)); 
+  }
+  for (int i = 0; i < sz1; i++)
+    printf("%15.10f     %15.10f     %15.10f     %15.10f     %15.10f     %15.10f\n", t1[i], t2[i], t3[i], t4[i], t5[i], t6[i]);
+}
+
+void print(const real_tensor& t1, const real_tensor& t2, const real_tensor& t3, const real_tensor& t4,
+           const real_tensor& t5, const real_tensor& t6, const real_tensor& t7) {
+  int sz1 = t1.size(); 
+  for (unsigned int i = 0; i < t1.ndim(); i++) {
+      printf("%d     %d     %d     %d\n     %d     %d     %d\n", t1.dim(i), t2.dim(i), t3.dim(i), t4.dim(i), 
+          t5.dim(i), t6.dim(i), t7.dim(i)); 
+  }
+  for (int i = 0; i < sz1; i++)
+    printf("%15.10f     %15.10f     %15.10f     %15.10f     %15.10f     %15.10f     %15.10f\n", t1[i], t2[i], t3[i], t4[i], 
+        t5[i], t6[i], t7[i]);
 }
 
 template <typename Q>
@@ -743,6 +818,34 @@ wstTensorT<Q> abs(const wstTensorT<std::complex<Q> >&t) {
   int sz = R.size();
   for (int i = 0; i < sz; i++) R[i] = std::abs(t[i]);
   return R;
+}
+
+std::vector<real_tensor> real(const std::vector<complex_tensor>& v) {
+  std::vector<real_tensor> w(v.size());
+  for (unsigned int i = 0; i < v.size(); i++) w[i] = real(v[i]);
+  return w;
+}
+
+std::vector<real_tensor> imag(const std::vector<complex_tensor>& v) {
+  std::vector<real_tensor> w(v.size());
+  for (unsigned int i = 0; i < v.size(); i++) w[i] = imag(v[i]);
+  return w;
+}
+
+std::vector<real_tensor> abs(const std::vector<complex_tensor>& v) {
+  std::vector<real_tensor> w(v.size());
+  for (unsigned int i = 0; i < v.size(); i++) w[i] = abs(v[i]);
+  return w;
+}
+
+void print(const std::vector<real_tensor>& v) {
+  int nsize = v[0].size();
+  for (int i = 0; i < nsize; i++) {
+    for (const real_tensor& t : v) {
+      printf("%15.8e   ", t(i));
+    }
+    printf("\n");
+  }
 }
 
 // I realize that this code is totally sub-optimal

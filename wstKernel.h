@@ -13,7 +13,7 @@ class wstKernel {
   public:
   virtual wstTensorT<T> apply(const wstTensorT<T>& t) const = 0;
 
-  wstMatrixT<T> sandwich(const std::vector<wstTensorT<T> >& orbs) {
+  wstMatrixT<T> sandwich(const std::vector<wstTensorT<T> >& orbs) const {
     int norbs = orbs.size();
     std::vector<wstTensorT<T> > Korbs(norbs);
     for (int i = 0; i < norbs; i++) {

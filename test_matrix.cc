@@ -114,7 +114,7 @@ bool test_matrix_cols()
     wstMatrixT<double> Ac0 = from_vector(4,1,ac0);
     std::vector<double> ac1 MARRAYSQCOL2;
     wstMatrixT<double> Ac1 = from_vector(4,1,ac1);
-    std::vector<wstMatrixT<double> > Acols = A.cols(wstMatrixSlice(0,1));
+    std::vector<wstMatrixT<double> > Acols = A.cols(wstSlice(0,1));
     passed = passed && norm2(Ac0 - Acols[0]) < 1e-16;
     passed = passed && norm2(Ac1 - Acols[1]) < 1e-16;
   }
@@ -129,14 +129,14 @@ bool test_matrix_slice()
     wstMatrixT<double> A = from_vector(2,3,av);
     std::vector<double> avs MARRAY1SLICE1;
     wstMatrixT<double> As = from_vector(2,2,avs);
-    passed = passed && norm2(As - A(wstMatrixSlice(0,1,1,2))) < 1e-16;
+    passed = passed && norm2(As - A(wstSlice(0,1,1,2))) < 1e-16;
   }
   {
     std::vector<double> av MARRAY1;
     wstMatrixT<double> A = from_vector(2,3,av);
     std::vector<double> avs MARRAY1SLICE2;
     wstMatrixT<double> As = from_vector(2,2,avs);
-    passed = passed && norm2(As - A(wstMatrixSlice(0,1,0,1))) < 1e-16;
+    passed = passed && norm2(As - A(wstSlice(0,1,0,1))) < 1e-16;
   }
   return passed;
 }

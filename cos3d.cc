@@ -73,7 +73,7 @@ public:
       }
     }
     print(S);
-    std::vector<wstTensorT<Q> > rorbs = transform<Q>(orbs,evecs.cols(wstMatrixSlice(indx,S.ncols()-1)));
+    std::vector<wstTensorT<Q> > rorbs = transform<Q>(orbs,evecs.cols(wstSlice(indx,S.ncols()-1)));
     normalize(rorbs);
     return rorbs;
   }

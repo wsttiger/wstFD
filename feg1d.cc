@@ -46,7 +46,7 @@ public:
         indx = i; 
       }
     }
-    std::vector<wstTensorT<Q> > rorbs = transform<Q>(combined_orbs,evecs.cols(wstMatrixSlice(indx,S.ncols()-1)));
+    std::vector<wstTensorT<Q> > rorbs = transform<Q>(combined_orbs,evecs.cols(wstSlice(indx,S.ncols()-1)));
     normalize(rorbs);
     _orbs = rorbs;
     return rorbs;
@@ -85,29 +85,29 @@ complex_tensor apply_bsh_1d(const std::vector<double>& x,
 
 
 double_kernel_1d build_hamiltonian(const std::vector<double>& x, double hx, int npts) {
-  double_tensor Vpot;
+  real_tensor Vpot;
   Vpot.create(std::bind(V, L, std::placeholders::_1), x, npts, true);
   double_kernel_1d H = create_laplacian_7p_1d(Vpot, hx, -0.5); 
   return H;
 }
 
-std::vector<double_tensor > make_initial_guess(const double_kernel_1d& H, int npts0, int norbs, 
+std::vector<real_tensor > make_initial_guess(const double_kernel_1d& H, int npts0, int norbs, 
                                  bool random = false) {
-  std::vector<double_tensor > orbs;
+  std::vector<real_tensor > orbs;
   for (int i = 0; i < norbs; i++) {
     if (i == 0) {
       if (random) {
-        double_tensor f = random_function_double(npts0, true);
+        real_tensor f = random_function_double(npts0, true);
         normalize(f);
         orbs.push_back(f);
       }
       else {
-        double_tensor f = constant_function<double>(npts0, 1.0, true);
+        real_tensor f = constant_function<double>(npts0, 1.0, true);
         normalize(f);
         orbs.push_back(f);
       }
     } else {
-      double_tensor f = (random) ? random_function_double(npts0, true) : H.apply(orbs[i-1]);
+      real_tensor f = (random) ? random_function_double(npts0, true) : H.apply(orbs[i-1]);
       normalize(f);
       orbs.push_back(f);
     }
@@ -125,7 +125,7 @@ void doit() {
   // make hamiltonian kernel
   double_kernel_1d Hker = build_hamiltonian(x, hx, NPTS);
   // intial guess
-  std::vector<double_tensor > orbs = make_initial_guess(Hker, NPTS, norbs, true);
+  std::vector<real_tensor > orbs = make_initial_guess(Hker, NPTS, norbs, true);
   OrbitalCache<double> orbcache(2*norbs);
   orbs = orbcache.append(orbs);
 
@@ -146,14 +146,14 @@ void doit() {
     orbs = transform(orbs,evecs.cols());
     for (int i = 0 ; i < norbs; i++) e[i] = eigs(i);
   
-    std::vector<double_tensor > new_orbs(norbs);
+    std::vector<real_tensor > new_orbs(norbs);
     // loop over orbitals
     for (int iorb = 0; iorb < norbs; iorb++) {
       double shift = 0.0;
       if (e[iorb] > -1e-4) shift = 0.05 + e[iorb];
       double mu = std::sqrt(-2.0*(e[iorb]-shift));
       //printf("e: %10.5f     shift: %10.5f     t1: %10.5f     mu: %10.5f\n", e[iorb], shift, -2.0*(e[iorb]-shift), mu);
-      double_tensor vpsi = (V0-shift)*orbs[iorb];
+      real_tensor vpsi = (V0-shift)*orbs[iorb];
       new_orbs[iorb] = -2.0*real(apply_bsh_1d(x, hx, mu, vpsi));
     }
     orbs = orbcache.append(new_orbs);
