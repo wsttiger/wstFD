@@ -44,7 +44,7 @@ bool test_7_pts_lap_1d()
   wstKernel1D<double> kernel = create_laplacian_7p_1d(hx);
   wstTensorT<double> rho2 = kernel.apply(V);
   wstTensorT<double> errorT = rho-rho2;
-  double error = (rho-rho2).norm2()*L/NPTS;
+  double error = norm2(rho-rho2)*L/NPTS;
   return (error < 1.e-10);
 }
 
@@ -65,7 +65,7 @@ bool test_5_pts_lap_1d()
   wstTensorT<double> rho2 = kernel.apply(V);
   wstTensorT<double> errorT = rho-rho2;
 
-  double error = (rho-rho2).norm2()*L/NPTS;
+  double error = norm2(rho-rho2)*L/NPTS;
   return (error < 1.e-7);
 }
 
@@ -86,7 +86,7 @@ bool test_3_pts_lap_1d()
   wstTensorT<double> rho2 = kernel.apply(V);
   wstTensorT<double> errorT = rho-rho2;
 
-  double error = (rho-rho2).norm2()*L/NPTS;
+  double error = norm2(rho-rho2)*L/NPTS;
   return (error < 1.e-4);
 }
 

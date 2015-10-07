@@ -73,6 +73,7 @@ bool test_7_pts_lap_3d()
   wstTensorT<double> rho2 = kernel.apply(V);
   wstTensorT<double> errorT = rho-rho2;
   double error = norm2(rho-rho2)*L/NPTS;
+  printf("err: %15.5e\n", error);
   return (error < 1.e-8);
 }
 
@@ -121,6 +122,7 @@ bool test_5_pts_lap_3d()
   wstTensorT<double> rho2 = kernel.apply(V);
   wstTensorT<double> errorT = rho-rho2;
   double error = norm2(rho-rho2)*L/NPTS;
+  printf("err: %15.5e\n", error);
   return (error < 1.e-5);
 }
 
@@ -145,6 +147,7 @@ bool test_3_pts_lap_3d()
   wstTensorT<double> rho2 = kernel.apply(V);
   wstTensorT<double> errorT = rho-rho2;
   double error = norm2(rho-rho2)*L/NPTS;
+  printf("err: %15.5e\n", error);
   return (error < 1.e-1);
 }
 

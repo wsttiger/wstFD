@@ -4,7 +4,6 @@
 #include <vector>
 #include "wstTensor.h"
 #include "wstMatrix.h"
-//#include "wstUtils.h"
 
 using std::vector;
 
@@ -257,12 +256,14 @@ private:
   vector<wstStencil3D> _stencil;
   wstTensorT<T> _localf;
   bool _local;
+  bool _jacobi;
+  T _diag;
 
 public:
 
   // default constructor
   wstKernel3D()
-   : _local(false) {}
+   : _local(false), _jacobi(false), _diag(1.) {}
 
   // constructor with a local function attached
   // remember that we are making a deep copy of localf
@@ -270,24 +271,63 @@ public:
               const vector<int>& xoffset,
               const vector<int>& yoffset,
               const vector<int>& zoffset,
-              const vector<T>& coeffs) {
+              const vector<T>& coeffs,
+              const bool jacobi = false) {
     
     _localf = localf;
+    _jacobi = jacobi;
     _stencil = vector<wstStencil3D>(xoffset.size());
-    for (unsigned int i = 0; i < xoffset.size(); i++) 
-      _stencil[i] = wstStencil3D(xoffset[i], yoffset[i], zoffset[i], coeffs[i]);
+    T t1 = T(0);
+    for (unsigned int i = 0; i < xoffset.size(); i++) {
+      if (_jacobi) {
+        if (xoffset[i] == 0 && yoffset[i] == 0 && zoffset[i] == 0) {
+          t1 += coeffs[i];
+        } else {
+          _stencil[i] = wstStencil3D(xoffset[i], yoffset[i], zoffset[i], -coeffs[i]);
+        }
+      } else {
+          _stencil[i] = wstStencil3D(xoffset[i], yoffset[i], zoffset[i], coeffs[i]);
+      }
+    }
+    _diag = (_jacobi) ? T(1./t1) : T(1.);
     _local = true;
+
+    printf("Stencil:\n");
+    for (auto ist = 0; ist < _stencil.size(); ist++) {
+      wstStencil3D st = _stencil[ist];
+      printf("    %d     %d     %d     %15.8f\n", st.x, st.y, st.z, st.c);
+    }
+    printf("diag: %15.8f\n", _diag);
   }
 
   // constructor without a local function
   void create(const vector<int>& xoffset,
               const vector<int>& yoffset,
               const vector<int>& zoffset,
-              const vector<T>& coeffs) {
+              const vector<T>& coeffs,
+              const bool jacobi = false) {
+    _jacobi = jacobi;
     _stencil = vector<wstStencil3D>(xoffset.size());
-    for (unsigned int i = 0; i < xoffset.size(); i++) 
-      _stencil[i] = wstStencil3D(xoffset[i], yoffset[i], zoffset[i], coeffs[i]);
+    T t1 = T(0);
+    for (unsigned int i = 0; i < xoffset.size(); i++) { 
+      if (_jacobi) {
+        if (xoffset[i] == 0 && yoffset[i] == 0 && zoffset[i] == 0) {
+          t1 += coeffs[i];
+        } else {
+          _stencil[i] = wstStencil3D(xoffset[i], yoffset[i], zoffset[i], -coeffs[i]);
+        }
+      } else {
+          _stencil[i] = wstStencil3D(xoffset[i], yoffset[i], zoffset[i], coeffs[i]);
+      }
+    }
+    _diag = (_jacobi) ? T(1./t1) : T(1.);
     _local = false;
+    printf("Stencil:\n");
+    for (auto ist = 0; ist < _stencil.size(); ist++) {
+      wstStencil3D st = _stencil[ist];
+      printf("    %d     %d     %d     %15.8f\n", st.x, st.y, st.z, st.c);
+    }
+    printf("diag: %15.8f\n", _diag);
   }
 
   // include ability to convert from real to complex
@@ -324,7 +364,7 @@ public:
             wstStencil3D st = _stencil[ist];
             val += st.c*t(i+st.x, j+st.y, k+st.z);
           }
-          r(i,j,k) = val;
+          r(i,j,k) = _diag*val;
         }
       }
     }
@@ -644,6 +684,34 @@ double_kernel_3d create_laplacian_7p_3d(double hx, double hy, double hz, double 
 
   double_kernel_3d kernel;
   kernel.create(xoffset7p, yoffset7p, zoffset7p, vcoeffs7p);
+  return kernel;
+}
+
+double_kernel_3d create_laplacian_jacobi_7p_3d(wstTensorT<double> f, double hx, double hy, double hz, double scale = 1.0) {
+  int offsets7p[7] = {-3, -2, -1, 0, 1, 2, 3};
+  double coeffs7p[7] = {2.0/180.0, -27.0/180.0, 270.0/180.0, -490.0/180.0, 270.0/180.0, -27.0/180.0, 2.0/180.0};
+  vector<int> xoffset7p(21,0); 
+  vector<int> yoffset7p(21,0); 
+  vector<int> zoffset7p(21,0);
+  vector<double> vcoeffs7p(21,0.0);
+  int p = 0;
+  for (int i = 0; i < 7; i++) {
+    xoffset7p[i+p] = offsets7p[i];   
+    vcoeffs7p[i+p] = scale*coeffs7p[i]/hx/hx;
+  }
+  p += 7;
+  for (int i = 0; i < 7; i++) {
+    yoffset7p[i+p] = offsets7p[i];   
+    vcoeffs7p[i+p] = scale*coeffs7p[i]/hy/hy;
+  }
+  p += 7;
+  for (int i = 0; i < 7; i++) {
+    zoffset7p[i+p] = offsets7p[i];   
+    vcoeffs7p[i+p] = scale*coeffs7p[i]/hz/hz;
+  }
+
+  double_kernel_3d kernel;
+  kernel.create(f, xoffset7p, yoffset7p, zoffset7p, vcoeffs7p, true);
   return kernel;
 }
 
