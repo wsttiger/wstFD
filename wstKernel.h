@@ -258,12 +258,13 @@ private:
   bool _local;
   bool _jacobi;
   T _diag;
+  bool _debug = false;
 
 public:
 
   // default constructor
   wstKernel3D()
-   : _local(false), _jacobi(false), _diag(1.) {}
+   : _local(false), _jacobi(false), _diag(1.), _debug(false) {}
 
   // constructor with a local function attached
   // remember that we are making a deep copy of localf
@@ -273,7 +274,7 @@ public:
               const vector<int>& zoffset,
               const vector<T>& coeffs,
               const bool jacobi = false) {
-    
+
     _localf = localf;
     _jacobi = jacobi;
     _stencil = vector<wstStencil3D>(xoffset.size());
@@ -292,12 +293,14 @@ public:
     _diag = (_jacobi) ? T(1./t1) : T(1.);
     _local = true;
 
-    printf("Stencil:\n");
-    for (auto ist = 0; ist < _stencil.size(); ist++) {
-      wstStencil3D st = _stencil[ist];
-      printf("    %d     %d     %d     %15.8f\n", st.x, st.y, st.z, st.c);
+    if (_debug) {
+      printf("Stencil:\n");
+      for (auto ist = 0; ist < _stencil.size(); ist++) {
+        wstStencil3D st = _stencil[ist];
+        printf("    %d     %d     %d     %15.8f\n", st.x, st.y, st.z, st.c);
+      }
+      printf("diag: %15.8f\n", _diag);
     }
-    printf("diag: %15.8f\n", _diag);
   }
 
   // constructor without a local function
@@ -322,12 +325,14 @@ public:
     }
     _diag = (_jacobi) ? T(1./t1) : T(1.);
     _local = false;
-    printf("Stencil:\n");
-    for (auto ist = 0; ist < _stencil.size(); ist++) {
-      wstStencil3D st = _stencil[ist];
-      printf("    %d     %d     %d     %15.8f\n", st.x, st.y, st.z, st.c);
+    if (_debug) {
+      printf("Stencil:\n");
+      for (auto ist = 0; ist < _stencil.size(); ist++) {
+        wstStencil3D st = _stencil[ist];
+        printf("    %d     %d     %d     %15.8f\n", st.x, st.y, st.z, st.c);
+      }
+      printf("diag: %15.8f\n", _diag);
     }
-    printf("diag: %15.8f\n", _diag);
   }
 
   // include ability to convert from real to complex

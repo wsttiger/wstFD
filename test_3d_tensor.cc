@@ -55,7 +55,7 @@ double pgaussian(double coeff, double expnt, double L, double x, double y, doubl
 bool test_7_pts_lap_3d()
 {
   const double L = 5.0;
-  const int NPTS = 150;
+  const int NPTS = 350;
 
   vector<double> x = wstUtils::linspace(-L/2, L/2, NPTS);
   vector<double> y = wstUtils::linspace(-L/2, L/2, NPTS);
